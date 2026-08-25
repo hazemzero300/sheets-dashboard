@@ -577,6 +577,29 @@
             font-weight: 700; 
         }
 
+        /* تنسيق زر رابط الإعلان */
+        .link-btn {
+            background: var(--emerald-light);
+            color: var(--emerald);
+            padding: 6px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85em;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .link-btn:hover {
+            background: var(--emerald);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
+        }
+
         #loading { 
             display: flex; 
             flex-direction: column; 
@@ -751,7 +774,8 @@
                                 <th>المحافظة</th>
                                 <th>اسم المنتج</th>
                                 <th>السعر</th>
-                                <th>المصدر</th>
+                                <th>المصدر (الحملة)</th>
+                                <th class="ad-link-col">رابط الإعلان</th>
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody">
@@ -767,7 +791,8 @@
                             <tr>
                                 <th>التاريخ</th>
                                 <th>Sender ID (معرف العميل)</th>
-                                <th>رقم الحملة</th>
+                                <th>اسم / رقم الحملة</th>
+                                <th class="ad-link-col">رابط الإعلان</th>
                             </tr>
                         </thead>
                         <tbody id="leadsTableBody">
@@ -788,6 +813,7 @@
     let rawMessengerOrders = [];
     let rawMessengerLeads = [];
     let rawWhatsappOrders = [];
+    let rawWhatsappLeads = []; 
     
     let currentPlatform = 'messenger';
 
@@ -840,22 +866,19 @@
         if (platform === 'messenger') {
             allOrdersData = rawMessengerOrders;
             allLeadsData = rawMessengerLeads;
-            
-            document.getElementById('leads-card').style.display = 'flex';
-            document.getElementById('leads-tab-btn').style.display = 'inline-block';
-            document.getElementById('campaign-card').style.display = 'flex'; // إظهار كارت الحملات للماسنجر
         } else {
             allOrdersData = rawWhatsappOrders;
-            allLeadsData = [];
-            
-            document.getElementById('leads-card').style.display = 'none';
-            document.getElementById('leads-tab-btn').style.display = 'none';
-            document.getElementById('campaign-card').style.display = 'none'; // إخفاء كارت الحملات للواتساب
-            
-            if(document.getElementById('leads-tab').classList.contains('active')){
-                switchTab('orders', { currentTarget: document.getElementById('orders-tab-btn') });
-            }
+            allLeadsData = rawWhatsappLeads;
         }
+
+        // إخفاء عمود رابط الإعلان لو إحنا في الماسنجر
+        document.querySelectorAll('.ad-link-col').forEach(el => {
+            el.style.display = platform === 'messenger' ? 'none' : 'table-cell';
+        });
+
+        document.getElementById('leads-card').style.display = 'flex';
+        document.getElementById('leads-tab-btn').style.display = 'inline-block';
+        document.getElementById('campaign-card').style.display = 'flex';
 
         resetFilter(); 
         updateLiveTicker(allOrdersData);
@@ -881,6 +904,7 @@
             rawMessengerOrders = result.orders || [];
             rawMessengerLeads = result.leads || [];
             rawWhatsappOrders = result.whatsappOrders || [];
+            rawWhatsappLeads = result.whatsappLeads || [];
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'flex'; 
@@ -910,15 +934,12 @@
         }
     }
 
-    // الدالة السحرية الجديدة لفهم صيغ التواريخ المختلفة
     function parseCustomDate(rawDate) {
         if (!rawDate) return new Date(NaN);
         let dateStr = String(rawDate).trim();
         
-        // إزالة أي شرطة (-) بين التاريخ والوقت (مثل 14/08/2026 - 03:23 AM)
         dateStr = dateStr.replace(/\s*-\s*/, ' ');
 
-        // تحويل صيغة يوم/شهر/سنة إلى شهر/يوم/سنة عشان الجافاسكريبت تفهمها
         let match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
         if (match) {
             let d = match[1]; let m = match[2]; let y = match[3];
@@ -930,6 +951,7 @@
     function exportToCSV() {
         let isOrdersTabActive = document.getElementById('orders-tab').classList.contains('active');
         let dataToExport = isOrdersTabActive ? activeCrossFilteredData : currentFilteredLeads;
+        let showAdLink = currentPlatform === 'whatsapp';
         
         if (dataToExport.length === 0) return alert("لا توجد بيانات لتصديرها في هذا الجدول.");
 
@@ -937,7 +959,7 @@
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
 
         if (isOrdersTabActive) {
-            csvContent += "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر\n";
+            csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر\n";
             exportData.forEach(row => {
                 let rawDate = row["التاريخ والوقت"] || row["التاريخ والوقت "] || "-";
                 let date = formatExportDate(rawDate);
@@ -947,21 +969,30 @@
                 let sku = row["اسم المنتج"] || row["اسم المنتج "] || row["كود المنتج sku"] || "-";
                 let price = row["السعر"] || "0";
                 
-                let campaign = row["الحملة"] || row["رقم الحملة"];
-                if (currentPlatform === 'whatsapp') campaign = "واتساب";
-                else if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
-
-                csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign}\n`;
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["الحملة"] || row["رقم الحملة"];
+                if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
+                
+                csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign}`;
+                if (showAdLink) {
+                    let adLink = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"] || "أورجانيك";
+                    csvContent += `,${adLink}`;
+                }
+                csvContent += "\n";
             });
         } else {
-            csvContent += "التاريخ,Sender ID,رقم الحملة\n";
+            csvContent += showAdLink ? "التاريخ,Sender ID,اسم أو رقم الحملة,رابط الإعلان\n" : "التاريخ,Sender ID,اسم أو رقم الحملة\n";
             exportData.forEach(row => {
                 let rawDate = row["التاريخ"] || row["التاريخ والوقت"] || row["التاريخ والوقت "] || "-";
                 let date = formatExportDate(rawDate);
-                let senderId = row["Sender ID"] || "-";
-                let campaign = row["رقم الحملة"] || row["الحملة"] || "-";
+                let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["رقم الحملة"] || row["الحملة"] || "-";
 
-                csvContent += `${date},${senderId},${campaign}\n`;
+                csvContent += `${date},${senderId},${campaign}`;
+                if (showAdLink) {
+                    let adLink = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"] || "أورجانيك";
+                    csvContent += `,${adLink}`;
+                }
+                csvContent += "\n";
             });
         }
 
@@ -1036,8 +1067,6 @@
             let rawDate = row["التاريخ والوقت"] || row["التاريخ والوقت "];
             if (!rawDate) return false;
             let rowDate = parseCustomDate(rawDate);
-            
-            // التعديل الأهم هنا: لو التاريخ غير صالح، اخفي الطلب (return false)
             if (isNaN(rowDate.getTime())) return false; 
 
             let isAfterStart = true, isBeforeEnd = true;
@@ -1225,9 +1254,12 @@
         
         let ordersTableHTML = "";
         let leadsTableHTML = "";
+        
+        // متغير للتحكم في إظهار أو إخفاء عمود رابط الإعلان
+        let showAdLink = currentPlatform === 'whatsapp';
 
         if (totalOrders === 0) {
-            ordersTableHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات طلبات مطابقة للفلتر 🔍</td></tr>`;
+            ordersTableHTML = `<tr><td colspan="${showAdLink ? 8 : 7}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات طلبات مطابقة للفلتر 🔍</td></tr>`;
         } else {
             let reversedOrders = [...data].reverse();
             reversedOrders.forEach(row => {
@@ -1235,12 +1267,8 @@
                 let price = parseFloat(priceRaw) || 0;
                 totalRevenue += price;
 
-                let campaign = row["الحملة"] || row["رقم الحملة"];
-                if(currentPlatform === 'whatsapp') {
-                    campaign = "واتساب";
-                } else if (!campaign || campaign.toString().trim() === "") {
-                    campaign = "أورجانيك";
-                }
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["الحملة"] || row["رقم الحملة"];
+                if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
                 campaigns[campaign] = (campaigns[campaign] || 0) + 1;
 
                 let sku = row["اسم المنتج"] || row["اسم المنتج "] || row["كود المنتج sku"] || "-";
@@ -1266,6 +1294,15 @@
                 let gov = row["المحافظة"] || row["المحافظة "] || "غير محدد";
                 let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
 
+                let adLinkTd = "";
+                if (showAdLink) {
+                    let adLinkStr = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"];
+                    let linkBtnHtml = (adLinkStr && adLinkStr !== "أورجانيك" && adLinkStr.trim() !== "" && adLinkStr !== "-") 
+                        ? `<a href="${adLinkStr}" target="_blank" class="link-btn">🔗 عرض</a>` 
+                        : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
+                    adLinkTd = `<td>${linkBtnHtml}</td>`;
+                }
+
                 ordersTableHTML += `
                     <tr>
                         <td style="font-size: 0.9em;">${date}</td>
@@ -1275,13 +1312,14 @@
                         <td style="font-weight: 700; color: #3B82F6;">${sku}</td>
                         <td class="revenue-text" style="font-weight: 800;">${price} ج.م</td>
                         <td><span class="${badgeClass}">${campaign}</span></td>
+                        ${adLinkTd}
                     </tr>
                 `;
             });
         }
 
         if (totalLeads === 0) {
-            leadsTableHTML = `<tr><td colspan="3" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
+            leadsTableHTML = `<tr><td colspan="${showAdLink ? 4 : 3}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
         } else {
             let reversedLeads = [...leadsData].reverse();
             reversedLeads.forEach(row => {
@@ -1298,14 +1336,25 @@
                     } else { date = rawDate; }
                 }
                 
-                let senderId = row["Sender ID"] || "-";
-                let campaign = row["رقم الحملة"] || row["الحملة"] || "غير محدد";
+                let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["رقم الحملة"] || row["الحملة"] || "غير محدد";
+                let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
                 
+                let adLinkTdLead = "";
+                if (showAdLink) {
+                    let adLinkStr = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"];
+                    let linkBtnHtml = (adLinkStr && adLinkStr !== "أورجانيك" && adLinkStr.trim() !== "" && adLinkStr !== "-") 
+                        ? `<a href="${adLinkStr}" target="_blank" class="link-btn">🔗 عرض</a>` 
+                        : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
+                    adLinkTdLead = `<td>${linkBtnHtml}</td>`;
+                }
+
                 leadsTableHTML += `
                     <tr>
                         <td style="font-size: 0.9em;">${date}</td>
                         <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em; font-weight: 700; color: #3B82F6;">${senderId}</td>
-                        <td><span class="campaign-badge">${campaign}</span></td>
+                        <td><span class="${badgeClass}">${campaign}</span></td>
+                        ${adLinkTdLead}
                     </tr>
                 `;
             });
@@ -1373,26 +1422,23 @@
         });
 
         if (campaignChartInstance) campaignChartInstance.destroy();
+        let ctxBar = document.getElementById('campaignChart').getContext('2d');
+        let gradientBar = ctxBar.createLinearGradient(0, 0, 0, 400);
+        gradientBar.addColorStop(0, '#059669'); 
+        gradientBar.addColorStop(1, isDark ? '#022C22' : '#D1FAE5'); 
 
-        if (currentPlatform === 'messenger') {
-            let ctxBar = document.getElementById('campaignChart').getContext('2d');
-            let gradientBar = ctxBar.createLinearGradient(0, 0, 0, 400);
-            gradientBar.addColorStop(0, '#059669'); 
-            gradientBar.addColorStop(1, isDark ? '#022C22' : '#D1FAE5'); 
-
-            campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
-                type: 'bar',
-                data: { labels: Object.keys(campaigns), datasets: [{ data: Object.values(campaigns), backgroundColor: gradientBar, borderRadius: 8, barThickness: 45 }] },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, animation: { y: { duration: 800, easing: 'easeOutQuart' } },
-                    plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12 } },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
-                        x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
-                    }
+        campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
+            type: 'bar',
+            data: { labels: Object.keys(campaigns), datasets: [{ data: Object.values(campaigns), backgroundColor: gradientBar, borderRadius: 8, barThickness: 45 }] },
+            options: { 
+                responsive: true, maintainAspectRatio: false, animation: { y: { duration: 800, easing: 'easeOutQuart' } },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12 } },
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
+                    x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
                 }
-            });
-        }
+            }
+        });
     }
 
     async function syncDataBackground() {
@@ -1403,13 +1449,14 @@
             rawMessengerOrders = result.orders || [];
             rawMessengerLeads = result.leads || [];
             rawWhatsappOrders = result.whatsappOrders || [];
+            rawWhatsappLeads = result.whatsappLeads || [];
             
             if (currentPlatform === 'messenger') {
                 allOrdersData = rawMessengerOrders;
                 allLeadsData = rawMessengerLeads;
             } else {
                 allOrdersData = rawWhatsappOrders;
-                allLeadsData = [];
+                allLeadsData = rawWhatsappLeads;
             }
             
             updateLiveTicker(allOrdersData);
@@ -1421,4 +1468,4 @@
     }
 </script>
 </body>
-</html>
+</html>س
