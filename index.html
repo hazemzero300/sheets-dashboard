@@ -938,13 +938,22 @@
         if (!rawDate) return new Date(NaN);
         let dateStr = String(rawDate).trim();
         
+        // إزالة أي مسافات أو شُرط زايدة
         dateStr = dateStr.replace(/\s*-\s*/, ' ');
 
+        // المحاولة الأولى: قراءة التاريخ لو كان (شهر/يوم/سنة) زي شيت الواتساب
+        let standardDate = new Date(dateStr);
+        if (!isNaN(standardDate.getTime())) {
+            return standardDate;
+        }
+
+        // المحاولة التانية: لو التاريخ جاي (يوم/شهر/سنة) بنبدلهم عشان الجافاسكريبت تفهمه
         let match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
         if (match) {
             let d = match[1]; let m = match[2]; let y = match[3];
-            dateStr = dateStr.replace(/^\d{2}\/\d{2}\/\d{4}/, `${m}/${d}/${y}`);
-        }
+            let fixedDateStr = dateStr.replace(/^\d{2}\/\d{2}\/\d{4}/, `${m}/${d}/${y}`);
+            return new Date(fixedDateStr);
+           }
         return new Date(dateStr);
     }
 
@@ -1271,9 +1280,16 @@
                 if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
                 campaigns[campaign] = (campaigns[campaign] || 0) + 1;
 
+                // التعديل هنا فقط: فصل المنتجات المجمعة بـ + لعدّها بشكل صحيح
                 let sku = row["اسم المنتج"] || row["اسم المنتج "] || row["كود المنتج sku"] || "-";
                 if (sku !== "-" && sku.toString().trim() !== "") {
-                    skuCounts[sku] = (skuCounts[sku] || 0) + 1;
+                    let productsArray = sku.toString().split('+');
+                    productsArray.forEach(p => {
+                        let cleanProduct = p.trim();
+                        if (cleanProduct !== "") {
+                            skuCounts[cleanProduct] = (skuCounts[cleanProduct] || 0) + 1;
+                        }
+                    });
                 }
 
                 let rawDate = row["التاريخ والوقت"] || row["التاريخ والوقت "];
@@ -1468,4 +1484,4 @@
     }
 </script>
 </body>
-</html>س
+</html>
