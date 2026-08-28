@@ -936,7 +936,7 @@
                 ${uniqueMessages.map(msg => `<div>• ${msg}</div>`).join('')}
             </div>
             <div style="font-size:12px;margin-top:8px;opacity:.85;">
-                لو ظهر خطأ RLS أو permission، لازم تضيف سياسة SELECT للجداول من Supabase.
+                لو ظهر خطأ RLS أو permission، لازم نضيف سياسة SELECT للجداول من Supabase.
             </div>
         `;
         box.style.display = 'block';
@@ -960,8 +960,13 @@
                 if (error) errors.push({ ...error, table });
             });
 
+            const waOrders = waOrdersResult.data;
+            const waLeads = waLeadsResult.data;
+            const msgOrders = msgOrdersResult.data;
+            const msgLeads = msgLeadsResult.data;
+
             // حفظ المتغير الخام للفلترة الدقيقة "_rawDate"
-            rawWhatsappOrders = waOrdersResult.data.map(item => ({
+            rawWhatsappOrders = waOrders.map(item => ({
                 "_rawDate": item.created_at,
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
@@ -975,7 +980,7 @@
                 "رابط الإعلان": item.ad_link
             }));
 
-            rawWhatsappLeads = waLeadsResult.data.map(item => ({
+            rawWhatsappLeads = waLeads.map(item => ({
                 "_rawDate": item.created_at,
                 "رقم العميل": item.customer_number,
                 "رقم الحملة": item.campaign_id,
@@ -983,20 +988,21 @@
                 "رابط الإعلان": item.ad_link
             }));
 
-            rawMessengerOrders = msgOrdersResult.data.map(item => ({
+            // تجهيز بيانات ماسنجر (تم تحديث اسم الحملة لقراءة campaign أو campaign_name)
+            rawMessengerOrders = msgOrders.map(item => ({
                 "_rawDate": item.created_at,
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
                 "المحافظة": item.governorate,
                 "اسم المنتج": item.product_name,
                 "السعر": item.price,
-                "اسم الحملة": item.campaign_name
+                "اسم الحملة": item.campaign || item.campaign_name
             }));
 
-            rawMessengerLeads = msgLeadsResult.data.map(item => ({
+            rawMessengerLeads = msgLeads.map(item => ({
                 "_rawDate": item.created_at,
                 "Sender ID": item.sender_id || item.customer_number,
-                "اسم الحملة": item.campaign_name
+                "اسم الحملة": item.campaign || item.campaign_name
             }));
 
             document.getElementById('loading').style.display = 'none';
@@ -1328,7 +1334,6 @@
         updateWidgets(activeCrossFilteredData, leadsData);
     }
 
-    // تصميم دالة مساعدة لتنسيق التاريخ يدويا لمنع تشوه النصوص (RTL/LTR Mix)
     function generateHtmlDate(rawDate) {
         if (!rawDate) return "-";
         let d = new Date(rawDate);
@@ -1580,13 +1585,13 @@
                 "المحافظة": item.governorate,
                 "اسم المنتج": item.product_name,
                 "السعر": item.price,
-                "اسم الحملة": item.campaign_name
+                "اسم الحملة": item.campaign || item.campaign_name
             }));
 
             rawMessengerLeads = msgLeadsResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "Sender ID": item.sender_id || item.customer_number,
-                "اسم الحملة": item.campaign_name
+                "اسم الحملة": item.campaign || item.campaign_name
             }));
 
             showSupabaseErrors(errors);
