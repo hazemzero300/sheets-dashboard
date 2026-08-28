@@ -896,19 +896,38 @@
         document.getElementById(tabId + '-tab').classList.add('active');
     }
 
+    // 🔴 التحديث الجذري: دالة بـ Loop لسحب كل البيانات بدون حد أقصى
     async function loadSupabaseTable(tableName) {
-        const result = await supabaseClient
-            .from(tableName)
-            .select('*')
-            .order('created_at', { ascending: true });
+        let allData = [];
+        let from = 0;
+        const step = 1000;
 
-        if (result.error) {
-            console.error(`Supabase error [${tableName}]:`, result.error);
+        while (true) {
+            const result = await supabaseClient
+                .from(tableName)
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, from + step - 1);
+
+            if (result.error) {
+                console.error(`Supabase error [${tableName}]:`, result.error);
+                return { data: allData, error: result.error };
+            }
+
+            const dataChunk = result.data || [];
+            allData = allData.concat(dataChunk);
+
+            // لو البيانات اللي رجعت أقل من 1000، معناها مفيش داتا تانية
+            if (dataChunk.length < step) {
+                break;
+            }
+            
+            from += step;
         }
 
         return {
-            data: result.data || [],
-            error: result.error || null
+            data: allData,
+            error: null
         };
     }
 
@@ -943,30 +962,28 @@
     }
 
     async function fetchData() {
-        const errors = [];
-
         try {
-            const waOrdersResult = await loadSupabaseTable('whatsapp_successful_orders');
-            const waLeadsResult = await loadSupabaseTable('whatsapp_potential_customers');
-            const msgOrdersResult = await loadSupabaseTable('successful_orders_massengar');
-            const msgLeadsResult = await loadSupabaseTable('potential_customers');
+            // 🔴 التحديث لتسريع الأداء: جلب الجداول كلها في نفس اللحظة (Parallel)
+            const [
+                waOrdersResult,
+                waLeadsResult,
+                msgOrdersResult,
+                msgLeadsResult
+            ] = await Promise.all([
+                loadSupabaseTable('whatsapp_successful_orders'),
+                loadSupabaseTable('whatsapp_potential_customers'),
+                loadSupabaseTable('successful_orders_massengar'),
+                loadSupabaseTable('potential_customers')
+            ]);
 
-            [
+            const errors = [
                 ['whatsapp_successful_orders', waOrdersResult.error],
                 ['whatsapp_potential_customers', waLeadsResult.error],
                 ['successful_orders_massengar', msgOrdersResult.error],
                 ['potential_customers', msgLeadsResult.error]
-            ].forEach(([table, error]) => {
-                if (error) errors.push({ ...error, table });
-            });
+            ].filter(([, error]) => error).map(([table, error]) => ({ ...error, table }));
 
-            const waOrders = waOrdersResult.data;
-            const waLeads = waLeadsResult.data;
-            const msgOrders = msgOrdersResult.data;
-            const msgLeads = msgLeadsResult.data;
-
-            // حفظ المتغير الخام للفلترة الدقيقة "_rawDate"
-            rawWhatsappOrders = waOrders.map(item => ({
+            rawWhatsappOrders = waOrdersResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
@@ -980,7 +997,7 @@
                 "رابط الإعلان": item.ad_link
             }));
 
-            rawWhatsappLeads = waLeads.map(item => ({
+            rawWhatsappLeads = waLeadsResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "رقم العميل": item.customer_number,
                 "رقم الحملة": item.campaign_id,
@@ -988,8 +1005,7 @@
                 "رابط الإعلان": item.ad_link
             }));
 
-            // تجهيز بيانات ماسنجر (تم تحديث اسم الحملة لقراءة campaign أو campaign_name)
-            rawMessengerOrders = msgOrders.map(item => ({
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
@@ -999,7 +1015,7 @@
                 "اسم الحملة": item.campaign || item.campaign_name
             }));
 
-            rawMessengerLeads = msgLeads.map(item => ({
+            rawMessengerLeads = msgLeadsResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "Sender ID": item.sender_id || item.customer_number,
                 "اسم الحملة": item.campaign || item.campaign_name
@@ -1023,7 +1039,7 @@
 
     function updateLiveTicker(data) {
         if (data.length > 0) {
-            let lastOrder = data[data.length - 1]; 
+            let lastOrder = data[0]; 
             let name = lastOrder["اسم العميل"] || "عميل";
             let gov = lastOrder["المحافظة"] || "غير محدد";
             let sku = lastOrder["اسم المنتج"] || "منتج";
@@ -1046,7 +1062,7 @@
         
         if (dataToExport.length === 0) return alert("لا توجد بيانات لتصديرها في هذا الجدول.");
 
-        let exportData = [...dataToExport].reverse();
+        let exportData = dataToExport; 
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
 
         if (isOrdersTabActive) {
@@ -1372,7 +1388,7 @@
         if (totalOrders === 0) {
             ordersTableHTML = `<tr><td colspan="${showAdLink ? 8 : 7}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات طلبات مطابقة للفلتر 🔍</td></tr>`;
         } else {
-            let reversedOrders = [...data].reverse();
+            let reversedOrders = data; 
             reversedOrders.forEach(row => {
                 let priceRaw = row["السعر"];
                 let price = parseFloat(priceRaw) || 0;
@@ -1426,7 +1442,7 @@
         if (totalLeads === 0) {
             leadsTableHTML = `<tr><td colspan="${showAdLink ? 4 : 3}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
         } else {
-            let reversedLeads = [...leadsData].reverse();
+            let reversedLeads = leadsData; 
             reversedLeads.forEach(row => {
                 let date = generateHtmlDate(row["_rawDate"]);
                 let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
