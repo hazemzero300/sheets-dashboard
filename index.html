@@ -5,9 +5,9 @@
     <title>Khaled Store | Executive Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* المتغيرات الأساسية (Light Mode) */
         :root {
             --bg-gradient: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
             --card-bg: rgba(255, 255, 255, 0.85);
@@ -23,7 +23,6 @@
             transition: all 0.4s ease;
         }
 
-        /* المتغيرات للـ Dark Mode */
         body.dark-mode {
             --bg-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
             --card-bg: rgba(30, 41, 59, 0.7);
@@ -577,7 +576,6 @@
             font-weight: 700; 
         }
 
-        /* تنسيق زر رابط الإعلان */
         .link-btn {
             background: var(--emerald-light);
             color: var(--emerald);
@@ -649,9 +647,10 @@
 </head>
 <body>
 
+<div id="supabaseErrorBox" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;max-width:900px;width:calc(100% - 40px);box-sizing:border-box;padding:14px 18px;border-radius:12px;background:#FEF2F2;color:#991B1B;border:1px solid #FCA5A5;box-shadow:0 10px 30px rgba(0,0,0,.12);text-align:right;"></div>
 <div id="loading">
     <div class="spinner"></div>
-    <div class="loading-text">جاري مزامنة أحدث البيانات...</div>
+    <div class="loading-text">جاري الاتصال بقاعدة بيانات Supabase...</div>
 </div>
 
 <div class="app-layout" id="dashboard" style="display:none;">
@@ -674,7 +673,7 @@
         <div class="header glass-panel">
             <h1 id="dashboard-title">نظرة عامة <span style="color: var(--emerald); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">الماسنجر</span></h1>
             <div class="header-right">
-                <div class="header-tag">Live Dashboard 🟢</div>
+                <div class="header-tag">Supabase Live 🟢</div>
                 <button class="theme-toggle" onclick="toggleDarkMode()" id="theme-icon" title="تغيير المظهر">🌙</button>
             </div>
         </div>
@@ -808,7 +807,9 @@
 <script>
     Chart.defaults.font.family = 'Tajawal';
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbxLPbZ1Ume69EzGos18tBVg-uuU5bvSt6x5uuGTdRWs3pwFPk3eFMpSgFvQ2wxGtCCC/exec"; 
+    const SUPABASE_URL = 'https://kyotjarcktcdeyksjjvu.supabase.co';       
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_c0sSu98qpEQzK4pouqy8rA_6YiYMX5G';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     
     let rawMessengerOrders = [];
     let rawMessengerLeads = [];
@@ -871,7 +872,6 @@
             allLeadsData = rawWhatsappLeads;
         }
 
-        // إخفاء عمود رابط الإعلان لو إحنا في الماسنجر
         document.querySelectorAll('.ad-link-col').forEach(el => {
             el.style.display = platform === 'messenger' ? 'none' : 'table-cell';
         });
@@ -896,32 +896,131 @@
         document.getElementById(tabId + '-tab').classList.add('active');
     }
 
+    async function loadSupabaseTable(tableName) {
+        const result = await supabaseClient
+            .from(tableName)
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (result.error) {
+            console.error(`Supabase error [${tableName}]:`, result.error);
+        }
+
+        return {
+            data: result.data || [],
+            error: result.error || null
+        };
+    }
+
+    function showSupabaseErrors(errors) {
+        const validErrors = errors.filter(Boolean);
+        const box = document.getElementById('supabaseErrorBox');
+
+        if (!box) return;
+
+        if (validErrors.length === 0) {
+            box.style.display = 'none';
+            box.innerHTML = '';
+            return;
+        }
+
+        const uniqueMessages = [...new Set(validErrors.map(e => {
+            const table = e.table ? ` [${e.table}]` : '';
+            const message = e.message || e.details || e.hint || 'خطأ غير معروف';
+            return `${table} ${message}`;
+        }))];
+
+        box.innerHTML = `
+            <div style="font-weight:800;margin-bottom:8px;">⚠️ يوجد خطأ في قراءة بعض بيانات Supabase</div>
+            <div style="font-size:13px;line-height:1.8;">
+                ${uniqueMessages.map(msg => `<div>• ${msg}</div>`).join('')}
+            </div>
+            <div style="font-size:12px;margin-top:8px;opacity:.85;">
+                لو ظهر خطأ RLS أو permission، لازم تضيف سياسة SELECT للجداول من Supabase.
+            </div>
+        `;
+        box.style.display = 'block';
+    }
+
     async function fetchData() {
+        const errors = [];
+
         try {
-            const response = await fetch(API_URL);
-            const result = await response.json();
-            
-            rawMessengerOrders = result.orders || [];
-            rawMessengerLeads = result.leads || [];
-            rawWhatsappOrders = result.whatsappOrders || [];
-            rawWhatsappLeads = result.whatsappLeads || [];
-            
+            const waOrdersResult = await loadSupabaseTable('whatsapp_successful_orders');
+            const waLeadsResult = await loadSupabaseTable('whatsapp_potential_customers');
+            const msgOrdersResult = await loadSupabaseTable('successful_orders_massengar');
+            const msgLeadsResult = await loadSupabaseTable('potential_customers');
+
+            [
+                ['whatsapp_successful_orders', waOrdersResult.error],
+                ['whatsapp_potential_customers', waLeadsResult.error],
+                ['successful_orders_massengar', msgOrdersResult.error],
+                ['potential_customers', msgLeadsResult.error]
+            ].forEach(([table, error]) => {
+                if (error) errors.push({ ...error, table });
+            });
+
+            // حفظ المتغير الخام للفلترة الدقيقة "_rawDate"
+            rawWhatsappOrders = waOrdersResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "اسم العميل": item.customer_name,
+                "رقم الموبايل": item.mobile,
+                "المحافظة": item.governorate,
+                "العنوان بالتفصيل": item.address,
+                "كود المنتج sku": item.sku,
+                "اسم المنتج": item.product_name,
+                "السعر": item.price,
+                "رقم الإعلان": item.ad_id,
+                "اسم الإعلان": item.ad_name,
+                "رابط الإعلان": item.ad_link
+            }));
+
+            rawWhatsappLeads = waLeadsResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "رقم العميل": item.customer_number,
+                "رقم الحملة": item.campaign_id,
+                "اسم الحملة": item.campaign_name,
+                "رابط الإعلان": item.ad_link
+            }));
+
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "اسم العميل": item.customer_name,
+                "رقم الموبايل": item.mobile,
+                "المحافظة": item.governorate,
+                "اسم المنتج": item.product_name,
+                "السعر": item.price,
+                "اسم الحملة": item.campaign_name
+            }));
+
+            rawMessengerLeads = msgLeadsResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "Sender ID": item.sender_id || item.customer_number,
+                "اسم الحملة": item.campaign_name
+            }));
+
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'flex'; 
-            
+            document.getElementById('dashboard').style.display = 'flex';
+
+            showSupabaseErrors(errors);
             switchPlatform('messenger');
-            
+
         } catch (error) {
-            document.getElementById('loading').innerHTML = "<div class='loading-text' style='color:#EF4444;'>❌ فشل الاتصال بقاعدة البيانات. تأكد من الرابط.</div>";
+            console.error('Supabase connection error:', error);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'flex';
+            showSupabaseErrors([{ table: 'connection', message: error?.message || String(error) }]);
+            rawMessengerOrders = []; rawMessengerLeads = []; rawWhatsappOrders = []; rawWhatsappLeads = [];
+            switchPlatform('messenger');
         }
     }
 
     function updateLiveTicker(data) {
         if (data.length > 0) {
             let lastOrder = data[data.length - 1]; 
-            let name = lastOrder["اسم العميل"] || lastOrder["اسم العميل "] || "عميل";
-            let gov = lastOrder["المحافظة"] || lastOrder["المحافظة "] || "غير محدد";
-            let sku = lastOrder["اسم المنتج"] || lastOrder["اسم المنتج "] || lastOrder["كود المنتج sku"] || "منتج";
+            let name = lastOrder["اسم العميل"] || "عميل";
+            let gov = lastOrder["المحافظة"] || "غير محدد";
+            let sku = lastOrder["اسم المنتج"] || "منتج";
             let price = lastOrder["السعر"] || "0";
             
             let platName = currentPlatform === 'messenger' ? 'الماسنجر' : 'الواتساب';
@@ -932,29 +1031,6 @@
         } else {
             document.getElementById('tickerContainer').style.display = 'none';
         }
-    }
-
-    function parseCustomDate(rawDate) {
-        if (!rawDate) return new Date(NaN);
-        let dateStr = String(rawDate).trim();
-        
-        // إزالة أي مسافات أو شُرط زايدة
-        dateStr = dateStr.replace(/\s*-\s*/, ' ');
-
-        // المحاولة الأولى: قراءة التاريخ لو كان (شهر/يوم/سنة) زي شيت الواتساب
-        let standardDate = new Date(dateStr);
-        if (!isNaN(standardDate.getTime())) {
-            return standardDate;
-        }
-
-        // المحاولة التانية: لو التاريخ جاي (يوم/شهر/سنة) بنبدلهم عشان الجافاسكريبت تفهمه
-        let match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-        if (match) {
-            let d = match[1]; let m = match[2]; let y = match[3];
-            let fixedDateStr = dateStr.replace(/^\d{2}\/\d{2}\/\d{4}/, `${m}/${d}/${y}`);
-            return new Date(fixedDateStr);
-           }
-        return new Date(dateStr);
     }
 
     function exportToCSV() {
@@ -970,20 +1046,18 @@
         if (isOrdersTabActive) {
             csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر\n";
             exportData.forEach(row => {
-                let rawDate = row["التاريخ والوقت"] || row["التاريخ والوقت "] || "-";
-                let date = formatExportDate(rawDate);
-                let name = (row["اسم العميل"] || row["اسم العميل "] || "-").replace(/,/g, " "); 
+                let date = formatExportDate(row["_rawDate"]);
+                let name = (row["اسم العميل"] || "-").replace(/,/g, " "); 
                 let phone = row["رقم الموبايل"] || "-";
-                let gov = row["المحافظة"] || row["المحافظة "] || "-";
-                let sku = row["اسم المنتج"] || row["اسم المنتج "] || row["كود المنتج sku"] || "-";
+                let gov = row["المحافظة"] || "-";
+                let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
                 let price = row["السعر"] || "0";
-                
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["الحملة"] || row["رقم الحملة"];
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
                 if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
                 
                 csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign}`;
                 if (showAdLink) {
-                    let adLink = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"] || "أورجانيك";
+                    let adLink = row["رابط الإعلان"] || "أورجانيك";
                     csvContent += `,${adLink}`;
                 }
                 csvContent += "\n";
@@ -991,14 +1065,13 @@
         } else {
             csvContent += showAdLink ? "التاريخ,Sender ID,اسم أو رقم الحملة,رابط الإعلان\n" : "التاريخ,Sender ID,اسم أو رقم الحملة\n";
             exportData.forEach(row => {
-                let rawDate = row["التاريخ"] || row["التاريخ والوقت"] || row["التاريخ والوقت "] || "-";
-                let date = formatExportDate(rawDate);
+                let date = formatExportDate(row["_rawDate"]);
                 let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["رقم الحملة"] || row["الحملة"] || "-";
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "-";
 
                 csvContent += `${date},${senderId},${campaign}`;
                 if (showAdLink) {
-                    let adLink = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"] || "أورجانيك";
+                    let adLink = row["رابط الإعلان"] || "أورجانيك";
                     csvContent += `,${adLink}`;
                 }
                 csvContent += "\n";
@@ -1017,11 +1090,20 @@
     }
 
     function formatExportDate(rawDate) {
-        if (rawDate !== "-") {
-            let d = parseCustomDate(rawDate);
-            if (!isNaN(d.getTime())) return d.toLocaleString('en-US', {timeZone: 'Africa/Cairo'}).replace(/,/g, " -");
-        }
-        return rawDate; 
+        if (!rawDate) return "-";
+        let d = new Date(rawDate);
+        if (isNaN(d.getTime())) return "-";
+        
+        let year = d.getFullYear();
+        let month = String(d.getMonth() + 1).padStart(2, '0');
+        let day = String(d.getDate()).padStart(2, '0');
+        let hours = d.getHours();
+        let minutes = String(d.getMinutes()).padStart(2, '0');
+        let ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; 
+        
+        return `${year}-${month}-${day} ${hours}:${minutes} ${ampm}`;
     }
 
     function formatHTMLDate(dateObj) {
@@ -1073,9 +1155,8 @@
         }
 
         currentFilteredData = allOrdersData.filter(row => {
-            let rawDate = row["التاريخ والوقت"] || row["التاريخ والوقت "];
-            if (!rawDate) return false;
-            let rowDate = parseCustomDate(rawDate);
+            if (!row._rawDate) return false;
+            let rowDate = new Date(row._rawDate);
             if (isNaN(rowDate.getTime())) return false; 
 
             let isAfterStart = true, isBeforeEnd = true;
@@ -1093,9 +1174,8 @@
         });
 
         currentFilteredLeads = allLeadsData.filter(row => {
-            let rawDate = row["التاريخ"] || row["التاريخ والوقت"] || row["التاريخ والوقت "];
-            if (!rawDate) return false;
-            let rowDate = parseCustomDate(rawDate);
+            if (!row._rawDate) return false;
+            let rowDate = new Date(row._rawDate);
             if (isNaN(rowDate.getTime())) return false; 
 
             let isAfterStart = true, isBeforeEnd = true;
@@ -1161,7 +1241,7 @@
         let govsRaw = {};
 
         data.forEach(row => {
-            let gov = row["المحافظة"] || row["المحافظة "] || "غير محدد";
+            let gov = row["المحافظة"] || "غير محدد";
             govsRaw[gov] = (govsRaw[gov] || 0) + 1;
         });
 
@@ -1240,12 +1320,30 @@
 
     function applyCrossFilter(leadsData = currentFilteredLeads) {
         activeCrossFilteredData = currentFilteredData.filter(row => {
-            let gov = row["المحافظة"] || row["المحافظة "] || "غير محدد";
+            let gov = row["المحافظة"] || "غير محدد";
             let chartLabel = govCategoryMap[gov] || "غير محدد";
             return !hiddenGovLabels.includes(chartLabel);
         });
 
         updateWidgets(activeCrossFilteredData, leadsData);
+    }
+
+    // تصميم دالة مساعدة لتنسيق التاريخ يدويا لمنع تشوه النصوص (RTL/LTR Mix)
+    function generateHtmlDate(rawDate) {
+        if (!rawDate) return "-";
+        let d = new Date(rawDate);
+        if (isNaN(d.getTime())) return "-";
+        
+        let year = d.getFullYear();
+        let month = String(d.getMonth() + 1).padStart(2, '0');
+        let day = String(d.getDate()).padStart(2, '0');
+        let hours = d.getHours();
+        let minutes = String(d.getMinutes()).padStart(2, '0');
+        let ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; 
+        
+        return `<div dir="ltr" style="display:inline-block; text-align:right;">${year}-${month}-${day} <br> <span style="color: var(--text-muted); font-size: 0.85em; font-weight:bold;">${hours}:${minutes} ${ampm}</span></div>`;
     }
 
     function updateWidgets(data, leadsData = []) {
@@ -1264,7 +1362,6 @@
         let ordersTableHTML = "";
         let leadsTableHTML = "";
         
-        // متغير للتحكم في إظهار أو إخفاء عمود رابط الإعلان
         let showAdLink = currentPlatform === 'whatsapp';
 
         if (totalOrders === 0) {
@@ -1276,12 +1373,11 @@
                 let price = parseFloat(priceRaw) || 0;
                 totalRevenue += price;
 
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["الحملة"] || row["رقم الحملة"];
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
                 if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
                 campaigns[campaign] = (campaigns[campaign] || 0) + 1;
 
-                // التعديل هنا فقط: فصل المنتجات المجمعة بـ + لعدّها بشكل صحيح
-                let sku = row["اسم المنتج"] || row["اسم المنتج "] || row["كود المنتج sku"] || "-";
+                let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
                 if (sku !== "-" && sku.toString().trim() !== "") {
                     let productsArray = sku.toString().split('+');
                     productsArray.forEach(p => {
@@ -1292,27 +1388,15 @@
                     });
                 }
 
-                let rawDate = row["التاريخ والوقت"] || row["التاريخ والوقت "];
-                let date = "-";
-                if (rawDate) {
-                    let d = parseCustomDate(rawDate);
-                    if (!isNaN(d.getTime())) {
-                        let day = String(d.getDate()).padStart(2, '0');
-                        let month = String(d.getMonth() + 1).padStart(2, '0');
-                        let year = d.getFullYear();
-                        let time = d.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-                        date = `${day}/${month}/${year} <br> <span style="color: var(--text-muted); font-size: 0.85em; font-weight:bold;">${time}</span>`;
-                    } else { date = rawDate; }
-                }
-                
-                let name = row["اسم العميل"] || row["اسم العميل "] || "-";
+                let date = generateHtmlDate(row["_rawDate"]);
+                let name = row["اسم العميل"] || "-";
                 let phone = row["رقم الموبايل"] || "-";
-                let gov = row["المحافظة"] || row["المحافظة "] || "غير محدد";
+                let gov = row["المحافظة"] || "غير محدد";
                 let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
 
                 let adLinkTd = "";
                 if (showAdLink) {
-                    let adLinkStr = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"];
+                    let adLinkStr = row["رابط الإعلان"];
                     let linkBtnHtml = (adLinkStr && adLinkStr !== "أورجانيك" && adLinkStr.trim() !== "" && adLinkStr !== "-") 
                         ? `<a href="${adLinkStr}" target="_blank" class="link-btn">🔗 عرض</a>` 
                         : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
@@ -1339,26 +1423,14 @@
         } else {
             let reversedLeads = [...leadsData].reverse();
             reversedLeads.forEach(row => {
-                let rawDate = row["التاريخ"] || row["التاريخ والوقت"] || row["التاريخ والوقت "];
-                let date = "-";
-                if (rawDate) {
-                    let d = parseCustomDate(rawDate);
-                    if (!isNaN(d.getTime())) {
-                        let day = String(d.getDate()).padStart(2, '0');
-                        let month = String(d.getMonth() + 1).padStart(2, '0');
-                        let year = d.getFullYear();
-                        let time = d.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-                        date = `${day}/${month}/${year} <br> <span style="color: var(--text-muted); font-size: 0.85em; font-weight:bold;">${time}</span>`;
-                    } else { date = rawDate; }
-                }
-                
+                let date = generateHtmlDate(row["_rawDate"]);
                 let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || row["رقم الحملة"] || row["الحملة"] || "غير محدد";
+                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "غير محدد";
                 let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
                 
                 let adLinkTdLead = "";
                 if (showAdLink) {
-                    let adLinkStr = row["رابط الإعلان"] || row["رابط الإعلان "] || row["رابط الاعلان"];
+                    let adLinkStr = row["رابط الإعلان"];
                     let linkBtnHtml = (adLinkStr && adLinkStr !== "أورجانيك" && adLinkStr.trim() !== "" && adLinkStr !== "-") 
                         ? `<a href="${adLinkStr}" target="_blank" class="link-btn">🔗 عرض</a>` 
                         : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
@@ -1459,14 +1531,66 @@
 
     async function syncDataBackground() {
         try {
-            const response = await fetch(API_URL);
-            const result = await response.json();
-            
-            rawMessengerOrders = result.orders || [];
-            rawMessengerLeads = result.leads || [];
-            rawWhatsappOrders = result.whatsappOrders || [];
-            rawWhatsappLeads = result.whatsappLeads || [];
-            
+            const [
+                waOrdersResult,
+                waLeadsResult,
+                msgOrdersResult,
+                msgLeadsResult
+            ] = await Promise.all([
+                loadSupabaseTable('whatsapp_successful_orders'),
+                loadSupabaseTable('whatsapp_potential_customers'),
+                loadSupabaseTable('successful_orders_massengar'),
+                loadSupabaseTable('potential_customers')
+            ]);
+
+            const errors = [
+                ['whatsapp_successful_orders', waOrdersResult.error],
+                ['whatsapp_potential_customers', waLeadsResult.error],
+                ['successful_orders_massengar', msgOrdersResult.error],
+                ['potential_customers', msgLeadsResult.error]
+            ].filter(([, error]) => error)
+             .map(([table, error]) => ({ ...error, table }));
+
+            rawWhatsappOrders = waOrdersResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "اسم العميل": item.customer_name,
+                "رقم الموبايل": item.mobile,
+                "المحافظة": item.governorate,
+                "العنوان بالتفصيل": item.address,
+                "كود المنتج sku": item.sku,
+                "اسم المنتج": item.product_name,
+                "السعر": item.price,
+                "رقم الإعلان": item.ad_id,
+                "اسم الإعلان": item.ad_name,
+                "رابط الإعلان": item.ad_link
+            }));
+
+            rawWhatsappLeads = waLeadsResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "رقم العميل": item.customer_number,
+                "رقم الحملة": item.campaign_id,
+                "اسم الحملة": item.campaign_name,
+                "رابط الإعلان": item.ad_link
+            }));
+
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "اسم العميل": item.customer_name,
+                "رقم الموبايل": item.mobile,
+                "المحافظة": item.governorate,
+                "اسم المنتج": item.product_name,
+                "السعر": item.price,
+                "اسم الحملة": item.campaign_name
+            }));
+
+            rawMessengerLeads = msgLeadsResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "Sender ID": item.sender_id || item.customer_number,
+                "اسم الحملة": item.campaign_name
+            }));
+
+            showSupabaseErrors(errors);
+
             if (currentPlatform === 'messenger') {
                 allOrdersData = rawMessengerOrders;
                 allLeadsData = rawMessengerLeads;
@@ -1474,12 +1598,12 @@
                 allOrdersData = rawWhatsappOrders;
                 allLeadsData = rawWhatsappLeads;
             }
-            
+
             updateLiveTicker(allOrdersData);
-            applyDateFilter(); 
-            
+            applyDateFilter();
+
         } catch (error) {
-            console.log("خطأ في المزامنة اللحظية (الإنترنت ضعيف):", error);
+            console.error("خطأ في المزامنة اللحظية:", error);
         }
     }
 </script>
