@@ -47,7 +47,7 @@
         .app-layout {
             display: flex;
             gap: 25px;
-            max-width: 1400px;
+            max-width: 1450px;
             margin: 0 auto;
             align-items: flex-start;
         }
@@ -439,7 +439,7 @@
 
         .charts-container { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
             gap: 24px; 
             margin-bottom: 30px; 
         }
@@ -576,6 +576,15 @@
             font-weight: 700; 
         }
 
+        .status-badge {
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-size: 0.85em; 
+            font-weight: 700; 
+            display: inline-block;
+            text-align: center;
+        }
+
         .link-btn {
             background: var(--emerald-light);
             color: var(--emerald);
@@ -640,8 +649,8 @@
         @media (max-width: 900px) {
             .app-layout { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: static; padding: 15px; gap: 10px; }
-            .sidebar nav { display: flex; gap: 10px; }
-            .nav-btn { text-align: center; justify-content: center; margin-bottom: 0; padding: 10px; font-size: 0.95em; }
+            .sidebar nav { display: flex; gap: 10px; flex-wrap: wrap;}
+            .nav-btn { text-align: center; justify-content: center; margin-bottom: 0; padding: 10px; font-size: 0.95em; flex: 1; min-width: 140px;}
         }
     </style>
 </head>
@@ -665,6 +674,9 @@
             </button>
             <button class="nav-btn" id="nav-whatsapp" onclick="switchPlatform('whatsapp')">
                 📱 مبيعات الواتساب
+            </button>
+            <button class="nav-btn" id="nav-easy_orders" onclick="switchPlatform('easy_orders')">
+                🛒 إيزي أوردرز
             </button>
         </nav>
     </aside>
@@ -691,7 +703,7 @@
                     <button class="chip" onclick="setQuickDate('today')">اليوم</button>
                     <button class="chip" onclick="setQuickDate('yesterday')">الأمس</button>
                     <button class="chip" onclick="setQuickDate('week')">آخر 7 أيام</button>
-                    <button class="chip" onclick="setQuickDate('month')">هذا الشهر</button>
+                    <button class="chip" onclick="setQuickDate('month')">آخر 30 يوم</button>
                     <button class="chip" onclick="setQuickDate('all')" id="btnAllTime" style="background: var(--emerald); color: white;">كل الأوقات</button>
                 </div>
                 <button class="export-btn" onclick="exportToCSV()" title="تصدير البيانات الحالية كملف Excel">
@@ -714,28 +726,32 @@
         </div>
 
         <div class="cards">
-            <div class="card glass-panel">
+            <!-- كارت المبيعات (يظهر فقط في الماسنجر والواتساب) -->
+            <div class="card glass-panel" id="revenue-card">
                 <h3>إجمالي المبيعات (ج.م)</h3>
                 <p id="total-revenue" class="revenue-text">0</p>
             </div>
-            <div class="card glass-panel">
-                <h3>إجمالي الطلبات الناجحة</h3>
-                <p id="total-orders">0</p>
-            </div>
-            <div class="card glass-panel" id="leads-card">
-                <h3>إجمالي العملاء المحتملين</h3>
-                <p id="total-leads" class="leads-text">0</p>
-            </div>
-            <div class="card glass-panel">
+            
+            <div class="card glass-panel" id="sku-card">
                 <h3>المنتج الأكثر مبيعاً</h3>
                 <p id="top-sku" class="sku-text">-</p>
                 <div id="top-sku-count" class="subtitle">0 طلبات</div>
+            </div>
+            
+            <div class="card glass-panel">
+                <h3 id="orders-card-title">إجمالي الطلبات الناجحة</h3>
+                <p id="total-orders">0</p>
+            </div>
+            
+            <div class="card glass-panel" id="leads-card">
+                <h3>إجمالي العملاء المحتملين</h3>
+                <p id="total-leads" class="leads-text">0</p>
             </div>
         </div>
 
         <div class="charts-container">
             <div class="chart-box glass-panel">
-                <div class="chart-title">الانتشار الجغرافي</div>
+                <div class="chart-title" id="gov-chart-title">الانتشار الجغرافي</div>
                 <div class="chart-wrapper">
                     <canvas id="govChart"></canvas>
                 </div>
@@ -749,7 +765,7 @@
             </div>
 
             <div class="chart-box glass-panel" id="campaign-card">
-                <div class="chart-title">أداء الحملات الإعلانية (للطلبات الناجحة)</div>
+                <div class="chart-title" id="campaign-chart-title">أداء الحملات الإعلانية</div>
                 <div class="chart-wrapper">
                     <canvas id="campaignChart"></canvas>
                 </div>
@@ -758,24 +774,14 @@
 
         <div class="table-section glass-panel">
             <div class="tabs">
-                <button class="tab-btn active" id="orders-tab-btn" onclick="switchTab('orders', event)">سجل الطلبات الناجحة</button>
+                <button class="tab-btn active" id="orders-tab-btn" onclick="switchTab('orders', event)">سجل الطلبات</button>
                 <button class="tab-btn" id="leads-tab-btn" onclick="switchTab('leads', event)">قائمة العملاء المحتملين</button>
             </div>
             
             <div id="orders-tab" class="tab-content active">
                 <div class="table-wrapper">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>التاريخ</th>
-                                <th>اسم العميل</th>
-                                <th>رقم الموبايل</th>
-                                <th>المحافظة</th>
-                                <th>اسم المنتج</th>
-                                <th>السعر</th>
-                                <th>المصدر (الحملة)</th>
-                                <th class="ad-link-col">رابط الإعلان</th>
-                            </tr>
+                        <thead id="dynamicTableHeader">
                         </thead>
                         <tbody id="ordersTableBody">
                         </tbody>
@@ -811,10 +817,27 @@
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_c0sSu98qpEQzK4pouqy8rA_6YiYMX5G';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     
+    const statusTranslations = {
+        'created': { text: 'تم الإنشاء', color: '#3B82F6', bgColor: '#EFF6FF' },
+        'pending': { text: 'قيد المراجعة', color: '#D97706', bgColor: '#FEF3C7' },
+        'pending_customer_confirmation': { text: 'بانتظار تأكيد العميل', color: '#D97706', bgColor: '#FEF3C7' },
+        'delayed': { text: 'مؤجل', color: '#EA580C', bgColor: '#FFEDD5' },
+        'no_answer': { text: 'لا يوجد رد', color: '#4B5563', bgColor: '#F3F4F6' },
+        'confirmed': { text: 'مؤكد', color: '#4F46E5', bgColor: '#EEF2FF' },
+        'packing': { text: 'جاري التغليف', color: '#0891B2', bgColor: '#CFFAFE' },
+        'dispatched': { text: 'خرج للتوصيل', color: '#9333EA', bgColor: '#FAF5FF' },
+        'delivered': { text: 'تم التوصيل', color: '#16A34A', bgColor: '#DCFCE7' },
+        'canceled_by_customer': { text: 'ملغي (من العميل)', color: '#DC2626', bgColor: '#FEE2E2' },
+        'cancelled_by_admin': { text: 'ملغي (من الإدارة)', color: '#DC2626', bgColor: '#FEE2E2' },
+        'duplicate': { text: 'مكرر', color: '#991B1B', bgColor: '#FEF2F2' },
+        'returned': { text: 'مرتجع', color: '#BE123C', bgColor: '#FFE4E6' }
+    };
+
     let rawMessengerOrders = [];
     let rawMessengerLeads = [];
     let rawWhatsappOrders = [];
     let rawWhatsappLeads = []; 
+    let rawEasyOrders = []; 
     
     let currentPlatform = 'messenger';
 
@@ -861,23 +884,44 @@
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('nav-' + platform).classList.add('active');
 
-        let titleSpan = platform === 'messenger' ? 'الماسنجر' : 'الواتساب';
+        let titleSpan = platform === 'messenger' ? 'الماسنجر' : (platform === 'whatsapp' ? 'الواتساب' : 'إيزي أوردرز');
         document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--emerald); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">${titleSpan}</span>`;
 
-        if (platform === 'messenger') {
-            allOrdersData = rawMessengerOrders;
-            allLeadsData = rawMessengerLeads;
+        if (platform === 'easy_orders') {
+            allOrdersData = rawEasyOrders;
+            allLeadsData = [];
+            
+            document.getElementById('leads-card').style.display = 'none';
+            document.getElementById('leads-tab-btn').style.display = 'none';
+            document.getElementById('revenue-card').style.display = 'none';
+            
+            document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات';
+            document.getElementById('gov-chart-title').innerText = 'توزيع حالات الطلبات';
+            document.getElementById('campaign-chart-title').innerText = 'مصادر الزيارات (نسب المنصات)';
+            
+            switchTab('orders');
         } else {
-            allOrdersData = rawWhatsappOrders;
-            allLeadsData = rawWhatsappLeads;
+            document.getElementById('leads-card').style.display = 'flex';
+            document.getElementById('leads-tab-btn').style.display = 'inline-block';
+            document.getElementById('revenue-card').style.display = 'flex';
+            
+            document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات الناجحة';
+            document.getElementById('gov-chart-title').innerText = 'الانتشار الجغرافي';
+            document.getElementById('campaign-chart-title').innerText = 'أداء الحملات الإعلانية';
+
+            if (platform === 'messenger') {
+                allOrdersData = rawMessengerOrders;
+                allLeadsData = rawMessengerLeads;
+            } else {
+                allOrdersData = rawWhatsappOrders;
+                allLeadsData = rawWhatsappLeads;
+            }
         }
 
         document.querySelectorAll('.ad-link-col').forEach(el => {
-            el.style.display = platform === 'messenger' ? 'none' : 'table-cell';
+            el.style.display = platform === 'whatsapp' ? 'table-cell' : 'none';
         });
-
-        document.getElementById('leads-card').style.display = 'flex';
-        document.getElementById('leads-tab-btn').style.display = 'inline-block';
+        
         document.getElementById('campaign-card').style.display = 'flex';
 
         resetFilter(); 
@@ -891,12 +935,12 @@
         if(event && event.currentTarget) {
             event.currentTarget.classList.add('active');
         } else {
-            document.getElementById(tabId + '-tab-btn').classList.add('active');
+            let targetBtn = document.getElementById(tabId + '-tab-btn');
+            if(targetBtn) targetBtn.classList.add('active');
         }
         document.getElementById(tabId + '-tab').classList.add('active');
     }
 
-    // 🔴 التحديث الجذري: دالة بـ Loop لسحب كل البيانات بدون حد أقصى
     async function loadSupabaseTable(tableName) {
         let allData = [];
         let from = 0;
@@ -917,24 +961,15 @@
             const dataChunk = result.data || [];
             allData = allData.concat(dataChunk);
 
-            // لو البيانات اللي رجعت أقل من 1000، معناها مفيش داتا تانية
-            if (dataChunk.length < step) {
-                break;
-            }
-            
+            if (dataChunk.length < step) break;
             from += step;
         }
-
-        return {
-            data: allData,
-            error: null
-        };
+        return { data: allData, error: null };
     }
 
     function showSupabaseErrors(errors) {
         const validErrors = errors.filter(Boolean);
         const box = document.getElementById('supabaseErrorBox');
-
         if (!box) return;
 
         if (validErrors.length === 0) {
@@ -954,33 +989,28 @@
             <div style="font-size:13px;line-height:1.8;">
                 ${uniqueMessages.map(msg => `<div>• ${msg}</div>`).join('')}
             </div>
-            <div style="font-size:12px;margin-top:8px;opacity:.85;">
-                لو ظهر خطأ RLS أو permission، لازم نضيف سياسة SELECT للجداول من Supabase.
-            </div>
         `;
         box.style.display = 'block';
     }
 
     async function fetchData() {
         try {
-            // 🔴 التحديث لتسريع الأداء: جلب الجداول كلها في نفس اللحظة (Parallel)
             const [
-                waOrdersResult,
-                waLeadsResult,
-                msgOrdersResult,
-                msgLeadsResult
+                waOrdersResult, waLeadsResult, msgOrdersResult, msgLeadsResult, easyOrdersResult
             ] = await Promise.all([
                 loadSupabaseTable('whatsapp_successful_orders'),
                 loadSupabaseTable('whatsapp_potential_customers'),
                 loadSupabaseTable('successful_orders_massengar'),
-                loadSupabaseTable('potential_customers')
+                loadSupabaseTable('potential_customers'),
+                loadSupabaseTable('easy_order_campaigns')
             ]);
 
             const errors = [
                 ['whatsapp_successful_orders', waOrdersResult.error],
                 ['whatsapp_potential_customers', waLeadsResult.error],
                 ['successful_orders_massengar', msgOrdersResult.error],
-                ['potential_customers', msgLeadsResult.error]
+                ['potential_customers', msgLeadsResult.error],
+                ['easy_order_campaigns', easyOrdersResult.error]
             ].filter(([, error]) => error).map(([table, error]) => ({ ...error, table }));
 
             rawWhatsappOrders = waOrdersResult.data.map(item => ({
@@ -1021,6 +1051,17 @@
                 "اسم الحملة": item.campaign || item.campaign_name
             }));
 
+            rawEasyOrders = easyOrdersResult.data.map(item => ({
+                "_rawDate": item.created_at,
+                "اسم العميل": item.customer_name,
+                "رقم الموبايل": item.phone,
+                "رقم بديل": item.phone_alt || "-",
+                "اسم المنتج": item.product_name || "-",
+                "مصدر الزيارة": item.utm_source || "غير محدد",
+                "اسم الحملة": item.utm_campaign || "أورجانيك",
+                "حالة الطلب": item.order_status || "created"
+            }));
+
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'flex';
 
@@ -1031,8 +1072,7 @@
             console.error('Supabase connection error:', error);
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'flex';
-            showSupabaseErrors([{ table: 'connection', message: error?.message || String(error) }]);
-            rawMessengerOrders = []; rawMessengerLeads = []; rawWhatsappOrders = []; rawWhatsappLeads = [];
+            rawMessengerOrders = []; rawMessengerLeads = []; rawWhatsappOrders = []; rawWhatsappLeads = []; rawEasyOrders = [];
             switchPlatform('messenger');
         }
     }
@@ -1041,12 +1081,13 @@
         if (data.length > 0) {
             let lastOrder = data[0]; 
             let name = lastOrder["اسم العميل"] || "عميل";
-            let gov = lastOrder["المحافظة"] || "غير محدد";
             let sku = lastOrder["اسم المنتج"] || "منتج";
-            let price = lastOrder["السعر"] || "0";
             
-            let platName = currentPlatform === 'messenger' ? 'الماسنجر' : 'الواتساب';
-            let tickerText = `قام ${name} من (${gov}) بطلب [${sku}] بقيمة ${price} ج.م عبر ${platName} منذ وقت قصير! 🎉`;
+            let platName = currentPlatform === 'messenger' ? 'الماسنجر' : (currentPlatform === 'whatsapp' ? 'الواتساب' : 'إيزي أوردرز');
+            
+            let tickerText = currentPlatform === 'easy_orders' 
+                ? `قام ${name} بإنشاء طلب [${sku}] عبر ${platName} منذ وقت قصير! 🎉`
+                : `قام ${name} من (${lastOrder["المحافظة"] || "غير محدد"}) بطلب [${sku}] بقيمة ${lastOrder["السعر"] || 0} ج.م عبر ${platName} منذ وقت قصير! 🎉`;
             
             document.getElementById('tickerText').innerText = tickerText;
             document.getElementById('tickerContainer').style.display = 'flex';
@@ -1058,7 +1099,6 @@
     function exportToCSV() {
         let isOrdersTabActive = document.getElementById('orders-tab').classList.contains('active');
         let dataToExport = isOrdersTabActive ? activeCrossFilteredData : currentFilteredLeads;
-        let showAdLink = currentPlatform === 'whatsapp';
         
         if (dataToExport.length === 0) return alert("لا توجد بيانات لتصديرها في هذا الجدول.");
 
@@ -1066,25 +1106,43 @@
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
 
         if (isOrdersTabActive) {
-            csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر\n";
-            exportData.forEach(row => {
-                let date = formatExportDate(row["_rawDate"]);
-                let name = (row["اسم العميل"] || "-").replace(/,/g, " "); 
-                let phone = row["رقم الموبايل"] || "-";
-                let gov = row["المحافظة"] || "-";
-                let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
-                let price = row["السعر"] || "0";
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
-                if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
-                
-                csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign}`;
-                if (showAdLink) {
-                    let adLink = row["رابط الإعلان"] || "أورجانيك";
-                    csvContent += `,${adLink}`;
-                }
-                csvContent += "\n";
-            });
+            if (currentPlatform === 'easy_orders') {
+                csvContent += "التاريخ,الاسم,الموبايل,موبايل بديل,المنتج,مصدر الزيارة,اسم الحملة,حالة الطلب\n";
+                exportData.forEach(row => {
+                    let date = formatExportDate(row["_rawDate"]);
+                    let name = (row["اسم العميل"] || "-").replace(/,/g, " "); 
+                    let phone = row["رقم الموبايل"] || "-";
+                    let phoneAlt = row["رقم بديل"] || "-";
+                    let sku = row["اسم المنتج"] || "-";
+                    let source = row["مصدر الزيارة"] || "-";
+                    let campaign = row["اسم الحملة"] || "-";
+                    let statusTrans = statusTranslations[row["حالة الطلب"]]?.text || row["حالة الطلب"];
+                    
+                    csvContent += `${date},${name},${phone},${phoneAlt},${sku},${source},${campaign},${statusTrans}\n`;
+                });
+            } else {
+                let showAdLink = currentPlatform === 'whatsapp';
+                csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر\n";
+                exportData.forEach(row => {
+                    let date = formatExportDate(row["_rawDate"]);
+                    let name = (row["اسم العميل"] || "-").replace(/,/g, " "); 
+                    let phone = row["رقم الموبايل"] || "-";
+                    let gov = row["المحافظة"] || "-";
+                    let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
+                    let price = row["السعر"] || "0";
+                    let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
+                    if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
+                    
+                    csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign}`;
+                    if (showAdLink) {
+                        let adLink = row["رابط الإعلان"] || "أورجانيك";
+                        csvContent += `,${adLink}`;
+                    }
+                    csvContent += "\n";
+                });
+            }
         } else {
+            let showAdLink = currentPlatform === 'whatsapp';
             csvContent += showAdLink ? "التاريخ,Sender ID,اسم أو رقم الحملة,رابط الإعلان\n" : "التاريخ,Sender ID,اسم أو رقم الحملة\n";
             exportData.forEach(row => {
                 let date = formatExportDate(row["_rawDate"]);
@@ -1100,7 +1158,7 @@
             });
         }
 
-        let filePlat = currentPlatform === 'messenger' ? "Messenger" : "WhatsApp";
+        let filePlat = currentPlatform === 'messenger' ? "Messenger" : (currentPlatform === 'whatsapp' ? "WhatsApp" : "EasyOrders");
         let fileType = isOrdersTabActive ? "Orders" : "Leads";
         let encodedUri = encodeURI(csvContent);
         let link = document.createElement("a");
@@ -1115,7 +1173,6 @@
         if (!rawDate) return "-";
         let d = new Date(rawDate);
         if (isNaN(d.getTime())) return "-";
-        
         let year = d.getFullYear();
         let month = String(d.getMonth() + 1).padStart(2, '0');
         let day = String(d.getDate()).padStart(2, '0');
@@ -1124,7 +1181,6 @@
         let ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
         hours = hours ? hours : 12; 
-        
         return `${year}-${month}-${day} ${hours}:${minutes} ${ampm}`;
     }
 
@@ -1135,10 +1191,6 @@
     }
 
     function setQuickDate(type) {
-        let today = new Date();
-        let start = new Date();
-        let end = new Date();
-
         document.querySelectorAll('.chip').forEach(btn => {
             btn.style.background = '';
             btn.style.color = '';
@@ -1146,30 +1198,55 @@
         event.currentTarget.style.background = 'var(--emerald)';
         event.currentTarget.style.color = 'white';
 
+        let today = new Date();
+        let startStr = '';
+        let endStr = '';
+
         if (type === 'today') {
+            startStr = formatHTMLDate(today);
+            endStr = formatHTMLDate(today);
         } else if (type === 'yesterday') {
-            start.setDate(today.getDate() - 1);
-            end.setDate(today.getDate() - 1);
+            let y = new Date(today);
+            y.setDate(today.getDate() - 1);
+            startStr = formatHTMLDate(y);
+            endStr = formatHTMLDate(y);
         } else if (type === 'week') {
-            start.setDate(today.getDate() - 6); 
+            let w = new Date(today);
+            w.setDate(today.getDate() - 6);
+            startStr = formatHTMLDate(w);
+            endStr = formatHTMLDate(today);
         } else if (type === 'month') {
-            start = new Date(today.getFullYear(), today.getMonth(), 1); 
+            let m = new Date(today);
+            m.setDate(today.getDate() - 29);
+            startStr = formatHTMLDate(m);
+            endStr = formatHTMLDate(today);
         } else if (type === 'all') {
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
             applyDateFilter();
             return;
         }
-        document.getElementById('startDate').value = formatHTMLDate(start);
-        document.getElementById('endDate').value = formatHTMLDate(end);
+
+        document.getElementById('startDate').value = startStr;
+        document.getElementById('endDate').value = endStr;
         applyDateFilter();
     }
 
     function applyDateFilter() {
-        let start = document.getElementById('startDate').value;
-        let end = document.getElementById('endDate').value;
+        let startVal = document.getElementById('startDate').value;
+        let endVal = document.getElementById('endDate').value;
 
-        if (!start && !end) {
+        if (startVal && endVal) {
+            if (new Date(startVal) > new Date(endVal)) {
+                let temp = startVal;
+                startVal = endVal;
+                endVal = temp;
+                document.getElementById('startDate').value = startVal;
+                document.getElementById('endDate').value = endVal;
+            }
+        }
+
+        if (!startVal && !endVal) {
             currentFilteredData = allOrdersData;
             currentFilteredLeads = allLeadsData;
             processData(allOrdersData, allLeadsData);
@@ -1180,16 +1257,13 @@
             if (!row._rawDate) return false;
             let rowDate = new Date(row._rawDate);
             if (isNaN(rowDate.getTime())) return false; 
-
             let isAfterStart = true, isBeforeEnd = true;
-            if (start) { 
-                let sDate = new Date(start); 
-                sDate.setHours(0,0,0,0); 
+            if (startVal) { 
+                let sDate = new Date(startVal); sDate.setHours(0,0,0,0); 
                 isAfterStart = rowDate >= sDate; 
             }
-            if (end) { 
-                let eDate = new Date(end); 
-                eDate.setHours(23,59,59,999); 
+            if (endVal) { 
+                let eDate = new Date(endVal); eDate.setHours(23,59,59,999); 
                 isBeforeEnd = rowDate <= eDate; 
             }
             return isAfterStart && isBeforeEnd;
@@ -1199,16 +1273,13 @@
             if (!row._rawDate) return false;
             let rowDate = new Date(row._rawDate);
             if (isNaN(rowDate.getTime())) return false; 
-
             let isAfterStart = true, isBeforeEnd = true;
-            if (start) { 
-                let sDate = new Date(start); 
-                sDate.setHours(0,0,0,0); 
+            if (startVal) { 
+                let sDate = new Date(startVal); sDate.setHours(0,0,0,0); 
                 isAfterStart = rowDate >= sDate; 
             }
-            if (end) { 
-                let eDate = new Date(end); 
-                eDate.setHours(23,59,59,999); 
+            if (endVal) { 
+                let eDate = new Date(endVal); eDate.setHours(23,59,59,999); 
                 isBeforeEnd = rowDate <= eDate; 
             }
             return isAfterStart && isBeforeEnd;
@@ -1255,58 +1326,80 @@
         }, stepTime);
     }
 
+    const tooltipPercentageCallback = {
+        label: function(context) {
+            let label = context.label || '';
+            if (label) label += ': ';
+            let value = context.raw;
+            let total = context.chart._metasets[context.datasetIndex].total;
+            let percentage = Math.round((value / total) * 100) + '%';
+            return label + value + ' طلب (' + percentage + ')';
+        }
+    };
+
     function processData(data, leadsData = []) {
         hiddenGovLabels = []; 
         govCategoryMap = {};
 
         let totalOrders = data.length;
-        let govsRaw = {};
+        let rawCategoryCounts = {};
 
         data.forEach(row => {
-            let gov = row["المحافظة"] || "غير محدد";
-            govsRaw[gov] = (govsRaw[gov] || 0) + 1;
+            let categoryField = currentPlatform === 'easy_orders' ? (row["حالة الطلب"] || "غير محدد") : (row["المحافظة"] || "غير محدد");
+            rawCategoryCounts[categoryField] = (rawCategoryCounts[categoryField] || 0) + 1;
         });
 
-        let govsClean = {};
+        let cleanCategoryCounts = {};
         let othersDetails = []; 
         let othersCount = 0;
         let threshold = totalOrders * 0.03; 
 
-        for (const [gov, count] of Object.entries(govsRaw)) {
-            if (count < threshold) {
+        for (const [key, count] of Object.entries(rawCategoryCounts)) {
+            if (count < threshold && currentPlatform !== 'easy_orders') {
                 othersCount += count;
-                othersDetails.push(`- ${gov}: ${count} طلب`); 
-                govCategoryMap[gov] = 'أخرى';
+                othersDetails.push(`- ${key}: ${count} طلب`); 
+                govCategoryMap[key] = 'أخرى';
             } else { 
-                govsClean[gov] = count; 
-                govCategoryMap[gov] = gov;
+                cleanCategoryCounts[key] = count; 
+                govCategoryMap[key] = key;
             }
         }
-        if (othersCount > 0) govsClean['أخرى'] = othersCount; 
+        if (othersCount > 0 && currentPlatform !== 'easy_orders') cleanCategoryCounts['أخرى'] = othersCount; 
 
         if (govChartInstance) govChartInstance.destroy();
 
         let isDark = document.body.classList.contains('dark-mode');
         let chartTextColor = isDark ? '#F1F5F9' : '#0F172A';
         let tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(30, 41, 59, 0.95)';
-        const distinctColors = ['#059669', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EA580C', '#4F46E5', '#BE123C', '#1D4ED8', '#B45309', '#047857'];
+        const defaultDistinctColors = ['#059669', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EA580C', '#4F46E5', '#BE123C', '#1D4ED8', '#B45309', '#047857'];
+        
+        let chartLabels = [];
+        let chartData = [];
+        let chartColors = [];
+
+        if (currentPlatform === 'easy_orders') {
+            for (const [status, count] of Object.entries(cleanCategoryCounts)) {
+                let trans = statusTranslations[status];
+                chartLabels.push(trans ? trans.text : status);
+                chartData.push(count);
+                chartColors.push(trans ? trans.color : '#64748B');
+            }
+        } else {
+            chartLabels = Object.keys(cleanCategoryCounts);
+            chartData = Object.values(cleanCategoryCounts);
+            chartColors = defaultDistinctColors;
+        }
 
         govChartInstance = new Chart(document.getElementById('govChart'), {
             type: 'doughnut',
             data: { 
-                labels: Object.keys(govsClean), 
+                labels: chartLabels, 
                 datasets: [{ 
-                    data: Object.values(govsClean), 
-                    backgroundColor: distinctColors, 
-                    borderWidth: 4, 
-                    borderColor: isDark ? '#1E293B' : '#FFFFFF', 
-                    hoverOffset: 12 
+                    data: chartData, backgroundColor: chartColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 
                 }] 
             },
             options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                cutout: '70%',
+                responsive: true, maintainAspectRatio: false, cutout: '70%',
                 animation: { animateScale: true, animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
                 plugins: { 
                     legend: { 
@@ -1316,22 +1409,22 @@
                             const index = legendItem.index;
                             const chart = legend.chart;
                             const label = legendItem.text;
-
                             chart.toggleDataVisibility(index);
                             chart.update();
-
                             if (!chart.getDataVisibility(index)) {
                                 if (!hiddenGovLabels.includes(label)) hiddenGovLabels.push(label);
                             } else {
                                 hiddenGovLabels = hiddenGovLabels.filter(l => l !== label);
                             }
-
                             applyCrossFilter(leadsData); 
                         }
                     },
                     tooltip: { 
                         backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12,
-                        callbacks: { afterBody: function(context) { return context[0].label === 'أخرى' ? '\nالتفاصيل:\n' + othersDetails.join('\n') : ''; } } 
+                        callbacks: {
+                            label: tooltipPercentageCallback.label,
+                            afterBody: function(context) { return context[0].label === 'أخرى' && currentPlatform !== 'easy_orders' ? '\nالتفاصيل:\n' + othersDetails.join('\n') : ''; } 
+                        } 
                     }
                 } 
             }
@@ -1342,8 +1435,13 @@
 
     function applyCrossFilter(leadsData = currentFilteredLeads) {
         activeCrossFilteredData = currentFilteredData.filter(row => {
-            let gov = row["المحافظة"] || "غير محدد";
-            let chartLabel = govCategoryMap[gov] || "غير محدد";
+            let cat = currentPlatform === 'easy_orders' ? (row["حالة الطلب"] || "غير محدد") : (row["المحافظة"] || "غير محدد");
+            let chartLabel = cat;
+            if (currentPlatform === 'easy_orders') {
+                chartLabel = statusTranslations[cat] ? statusTranslations[cat].text : cat;
+            } else {
+                chartLabel = govCategoryMap[cat] || "غير محدد";
+            }
             return !hiddenGovLabels.includes(chartLabel);
         });
 
@@ -1354,16 +1452,13 @@
         if (!rawDate) return "-";
         let d = new Date(rawDate);
         if (isNaN(d.getTime())) return "-";
-        
         let year = d.getFullYear();
         let month = String(d.getMonth() + 1).padStart(2, '0');
         let day = String(d.getDate()).padStart(2, '0');
         let hours = d.getHours();
         let minutes = String(d.getMinutes()).padStart(2, '0');
         let ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12; 
-        
+        hours = hours % 12; hours = hours ? hours : 12; 
         return `<div dir="ltr" style="display:inline-block; text-align:right;">${year}-${month}-${day} <br> <span style="color: var(--text-muted); font-size: 0.85em; font-weight:bold;">${hours}:${minutes} ${ampm}</span></div>`;
     }
 
@@ -1377,73 +1472,126 @@
         let totalOrders = data.length;
         let totalRevenue = 0;
         let totalLeads = leadsData.length; 
+        
         let campaigns = {};
         let skuCounts = {}; 
+        let sourceCounts = {}; 
         
         let ordersTableHTML = "";
         let leadsTableHTML = "";
-        
         let showAdLink = currentPlatform === 'whatsapp';
 
-        if (totalOrders === 0) {
-            ordersTableHTML = `<tr><td colspan="${showAdLink ? 8 : 7}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات طلبات مطابقة للفلتر 🔍</td></tr>`;
+        let tableHeaderHTML = "";
+        if (currentPlatform === 'easy_orders') {
+            tableHeaderHTML = `
+                <tr>
+                    <th>التاريخ</th>
+                    <th>اسم العميل</th>
+                    <th>رقم الموبايل</th>
+                    <th>موبايل بديل</th>
+                    <th>اسم المنتج</th>
+                    <th>مصدر الزيارة</th>
+                    <th>اسم الحملة</th>
+                    <th>حالة الطلب</th>
+                </tr>
+            `;
         } else {
-            let reversedOrders = data; 
-            reversedOrders.forEach(row => {
-                let priceRaw = row["السعر"];
-                let price = parseFloat(priceRaw) || 0;
-                totalRevenue += price;
+            tableHeaderHTML = `
+                <tr>
+                    <th>التاريخ</th>
+                    <th>اسم العميل</th>
+                    <th>رقم الموبايل</th>
+                    <th>المحافظة</th>
+                    <th>اسم المنتج</th>
+                    <th>السعر</th>
+                    <th>المصدر (الحملة)</th>
+                    ${showAdLink ? '<th class="ad-link-col">رابط الإعلان</th>' : ''}
+                </tr>
+            `;
+        }
+        document.getElementById('dynamicTableHeader').innerHTML = tableHeaderHTML;
 
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
-                if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
-                campaigns[campaign] = (campaigns[campaign] || 0) + 1;
-
+        if (totalOrders === 0) {
+            let colSpan = currentPlatform === 'easy_orders' ? 8 : (showAdLink ? 8 : 7);
+            ordersTableHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات طلبات مطابقة للفلتر 🔍</td></tr>`;
+        } else {
+            data.forEach(row => {
                 let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
-                if (sku !== "-" && sku.toString().trim() !== "") {
-                    let productsArray = sku.toString().split('+');
-                    productsArray.forEach(p => {
-                        let cleanProduct = p.trim();
-                        if (cleanProduct !== "") {
-                            skuCounts[cleanProduct] = (skuCounts[cleanProduct] || 0) + 1;
-                        }
-                    });
+                // حساب المنتجات بشكل صريح بدون تقسيم لضمان الدقة
+                let cleanProduct = sku.toString().trim();
+                if (cleanProduct !== "-" && cleanProduct !== "") {
+                    skuCounts[cleanProduct] = (skuCounts[cleanProduct] || 0) + 1;
                 }
 
                 let date = generateHtmlDate(row["_rawDate"]);
                 let name = row["اسم العميل"] || "-";
                 let phone = row["رقم الموبايل"] || "-";
-                let gov = row["المحافظة"] || "غير محدد";
-                let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
+                
+                if (currentPlatform === 'easy_orders') {
+                    let phoneAlt = row["رقم بديل"] || "-";
+                    let source = row["مصدر الزيارة"] || "غير محدد";
+                    let campaign = row["اسم الحملة"] || "أورجانيك";
+                    
+                    sourceCounts[source] = (sourceCounts[source] || 0) + 1;
 
-                let adLinkTd = "";
-                if (showAdLink) {
-                    let adLinkStr = row["رابط الإعلان"];
-                    let linkBtnHtml = (adLinkStr && adLinkStr !== "أورجانيك" && adLinkStr.trim() !== "" && adLinkStr !== "-") 
-                        ? `<a href="${adLinkStr}" target="_blank" class="link-btn">🔗 عرض</a>` 
-                        : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
-                    adLinkTd = `<td>${linkBtnHtml}</td>`;
+                    let rawStatus = row["حالة الطلب"] || "created";
+                    let trans = statusTranslations[rawStatus] || { text: rawStatus, color: '#64748B', bgColor: '#F1F5F9' };
+                    let statusBadgeHtml = `<span class="status-badge" style="background:${trans.bgColor}; color:${trans.color}; border: 1px solid ${trans.color}40;">${trans.text}</span>`;
+                    let sourceBadge = source === "أورجانيك" ? "organic-badge" : "campaign-badge";
+
+                    ordersTableHTML += `
+                        <tr>
+                            <td style="font-size: 0.9em;">${date}</td>
+                            <td style="font-weight: 700;">${name}</td>
+                            <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em;">${phone}</td>
+                            <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em; color:var(--text-muted);">${phoneAlt}</td>
+                            <td style="font-weight: 700; color: #3B82F6;">${sku}</td>
+                            <td><span class="${sourceBadge}">${source}</span></td>
+                            <td><span class="campaign-badge">${campaign}</span></td>
+                            <td>${statusBadgeHtml}</td>
+                        </tr>
+                    `;
+                } else {
+                    let priceRaw = row["السعر"];
+                    let price = parseFloat(priceRaw) || 0;
+                    totalRevenue += price;
+
+                    let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
+                    if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
+                    campaigns[campaign] = (campaigns[campaign] || 0) + 1;
+                    
+                    let gov = row["المحافظة"] || "غير محدد";
+                    let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
+
+                    let adLinkTd = "";
+                    if (showAdLink) {
+                        let adLinkStr = row["رابط الإعلان"];
+                        let linkBtnHtml = (adLinkStr && adLinkStr !== "أورجانيك" && adLinkStr.trim() !== "" && adLinkStr !== "-") 
+                            ? `<a href="${adLinkStr}" target="_blank" class="link-btn">🔗 عرض</a>` 
+                            : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
+                        adLinkTd = `<td>${linkBtnHtml}</td>`;
+                    }
+
+                    ordersTableHTML += `
+                        <tr>
+                            <td style="font-size: 0.9em;">${date}</td>
+                            <td style="font-weight: 700;">${name}</td>
+                            <td dir="ltr" style="text-align: right; letter-spacing: 1px; font-family: monospace; font-size: 1.1em;">${phone}</td>
+                            <td style="font-weight: 500;">${gov}</td>
+                            <td style="font-weight: 700; color: #3B82F6;">${sku}</td>
+                            <td class="revenue-text" style="font-weight: 800;">${price} ج.م</td>
+                            <td><span class="${badgeClass}">${campaign}</span></td>
+                            ${adLinkTd}
+                        </tr>
+                    `;
                 }
-
-                ordersTableHTML += `
-                    <tr>
-                        <td style="font-size: 0.9em;">${date}</td>
-                        <td style="font-weight: 700;">${name}</td>
-                        <td dir="ltr" style="text-align: right; letter-spacing: 1px; font-family: monospace; font-size: 1.1em;">${phone}</td>
-                        <td style="font-weight: 500;">${gov}</td>
-                        <td style="font-weight: 700; color: #3B82F6;">${sku}</td>
-                        <td class="revenue-text" style="font-weight: 800;">${price} ج.م</td>
-                        <td><span class="${badgeClass}">${campaign}</span></td>
-                        ${adLinkTd}
-                    </tr>
-                `;
             });
         }
 
         if (totalLeads === 0) {
             leadsTableHTML = `<tr><td colspan="${showAdLink ? 4 : 3}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
         } else {
-            let reversedLeads = leadsData; 
-            reversedLeads.forEach(row => {
+            leadsData.forEach(row => {
                 let date = generateHtmlDate(row["_rawDate"]);
                 let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
                 let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "غير محدد";
@@ -1482,12 +1630,15 @@
         }
 
         let currentOrdersValue = parseInt(document.getElementById('total-orders').innerText.replace(/,/g, '')) || 0;
-        let currentRevenueValue = parseInt(document.getElementById('total-revenue').innerText.replace(/,/g, '')) || 0;
-        let currentLeadsValue = parseInt(document.getElementById('total-leads').innerText.replace(/,/g, '')) || 0;
-        
         animateValue("total-orders", currentOrdersValue, totalOrders, 600);
-        animateValue("total-revenue", currentRevenueValue, totalRevenue, 600);
-        animateValue("total-leads", currentLeadsValue, totalLeads, 600); 
+
+        if (currentPlatform !== 'easy_orders') {
+            let currentRevenueValue = parseInt(document.getElementById('total-revenue').innerText.replace(/,/g, '')) || 0;
+            animateValue("total-revenue", currentRevenueValue, totalRevenue, 600);
+            
+            let currentLeadsValue = parseInt(document.getElementById('total-leads').innerText.replace(/,/g, '')) || 0;
+            animateValue("total-leads", currentLeadsValue, totalLeads, 600); 
+        }
 
         document.getElementById('top-sku').innerText = topSku;
         document.getElementById('top-sku-count').innerText = `تم بيعه ${topSkuCount} مرة`;
@@ -1513,9 +1664,7 @@
             type: 'doughnut',
             data: { 
                 labels: Object.keys(skuClean), 
-                datasets: [{ 
-                    data: Object.values(skuClean), backgroundColor: distinctColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 
-                }] 
+                datasets: [{ data: Object.values(skuClean), backgroundColor: distinctColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 }] 
             },
             options: { 
                 responsive: true, maintainAspectRatio: false, cutout: '70%',
@@ -1524,108 +1673,92 @@
                     legend: { position: 'bottom', labels: { color: chartTextColor, padding: 15, font: { size: 13, weight: 700 }, usePointStyle: true, pointStyle: 'circle' } },
                     tooltip: { 
                         backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12,
-                        callbacks: { afterBody: function(context) { return context[0].label === 'أخرى' ? '\nالتفاصيل:\n' + otherSkuDetails.join('\n') : ''; } } 
+                        callbacks: { 
+                            label: tooltipPercentageCallback.label,
+                            afterBody: function(context) { return context[0].label === 'أخرى' ? '\nالتفاصيل:\n' + otherSkuDetails.join('\n') : ''; } 
+                        } 
                     }
                 } 
             }
         });
 
         if (campaignChartInstance) campaignChartInstance.destroy();
-        let ctxBar = document.getElementById('campaignChart').getContext('2d');
-        let gradientBar = ctxBar.createLinearGradient(0, 0, 0, 400);
-        gradientBar.addColorStop(0, '#059669'); 
-        gradientBar.addColorStop(1, isDark ? '#022C22' : '#D1FAE5'); 
 
-        campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
-            type: 'bar',
-            data: { labels: Object.keys(campaigns), datasets: [{ data: Object.values(campaigns), backgroundColor: gradientBar, borderRadius: 8, barThickness: 45 }] },
-            options: { 
-                responsive: true, maintainAspectRatio: false, animation: { y: { duration: 800, easing: 'easeOutQuart' } },
-                plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12 } },
-                scales: { 
-                    y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
-                    x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
+        if (currentPlatform === 'easy_orders') {
+            campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
+                type: 'doughnut',
+                data: { 
+                    labels: Object.keys(sourceCounts), 
+                    datasets: [{ data: Object.values(sourceCounts), backgroundColor: distinctColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 }] 
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    animation: { animateScale: true, animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { color: chartTextColor, padding: 15, font: { size: 13, weight: 700 }, usePointStyle: true, pointStyle: 'circle' } },
+                        tooltip: { 
+                            backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12,
+                            callbacks: { label: tooltipPercentageCallback.label } 
+                        }
+                    } 
                 }
-            }
-        });
+            });
+        } else {
+            let ctxBar = document.getElementById('campaignChart').getContext('2d');
+            let gradientBar = ctxBar.createLinearGradient(0, 0, 0, 400);
+            gradientBar.addColorStop(0, '#059669'); 
+            gradientBar.addColorStop(1, isDark ? '#022C22' : '#D1FAE5'); 
+
+            campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
+                type: 'bar',
+                data: { labels: Object.keys(campaigns), datasets: [{ data: Object.values(campaigns), backgroundColor: gradientBar, borderRadius: 8, barThickness: 45 }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, animation: { y: { duration: 800, easing: 'easeOutQuart' } },
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12 } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
+                        x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
+                    }
+                }
+            });
+        }
     }
 
     async function syncDataBackground() {
         try {
-            const [
-                waOrdersResult,
-                waLeadsResult,
-                msgOrdersResult,
-                msgLeadsResult
-            ] = await Promise.all([
+            const [waOrdersResult, waLeadsResult, msgOrdersResult, msgLeadsResult, easyOrdersResult] = await Promise.all([
                 loadSupabaseTable('whatsapp_successful_orders'),
                 loadSupabaseTable('whatsapp_potential_customers'),
                 loadSupabaseTable('successful_orders_massengar'),
-                loadSupabaseTable('potential_customers')
+                loadSupabaseTable('potential_customers'),
+                loadSupabaseTable('easy_order_campaigns')
             ]);
 
             const errors = [
                 ['whatsapp_successful_orders', waOrdersResult.error],
                 ['whatsapp_potential_customers', waLeadsResult.error],
                 ['successful_orders_massengar', msgOrdersResult.error],
-                ['potential_customers', msgLeadsResult.error]
-            ].filter(([, error]) => error)
-             .map(([table, error]) => ({ ...error, table }));
+                ['potential_customers', msgLeadsResult.error],
+                ['easy_order_campaigns', easyOrdersResult.error]
+            ].filter(([, error]) => error).map(([table, error]) => ({ ...error, table }));
 
-            rawWhatsappOrders = waOrdersResult.data.map(item => ({
-                "_rawDate": item.created_at,
-                "اسم العميل": item.customer_name,
-                "رقم الموبايل": item.mobile,
-                "المحافظة": item.governorate,
-                "العنوان بالتفصيل": item.address,
-                "كود المنتج sku": item.sku,
-                "اسم المنتج": item.product_name,
-                "السعر": item.price,
-                "رقم الإعلان": item.ad_id,
-                "اسم الإعلان": item.ad_name,
-                "رابط الإعلان": item.ad_link
-            }));
-
-            rawWhatsappLeads = waLeadsResult.data.map(item => ({
-                "_rawDate": item.created_at,
-                "رقم العميل": item.customer_number,
-                "رقم الحملة": item.campaign_id,
-                "اسم الحملة": item.campaign_name,
-                "رابط الإعلان": item.ad_link
-            }));
-
-            rawMessengerOrders = msgOrdersResult.data.map(item => ({
-                "_rawDate": item.created_at,
-                "اسم العميل": item.customer_name,
-                "رقم الموبايل": item.mobile,
-                "المحافظة": item.governorate,
-                "اسم المنتج": item.product_name,
-                "السعر": item.price,
-                "اسم الحملة": item.campaign || item.campaign_name
-            }));
-
-            rawMessengerLeads = msgLeadsResult.data.map(item => ({
-                "_rawDate": item.created_at,
-                "Sender ID": item.sender_id || item.customer_number,
-                "اسم الحملة": item.campaign || item.campaign_name
-            }));
+            rawWhatsappOrders = waOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "العنوان بالتفصيل": item.address, "كود المنتج sku": item.sku, "اسم المنتج": item.product_name, "السعر": item.price, "رقم الإعلان": item.ad_id, "اسم الإعلان": item.ad_name, "رابط الإعلان": item.ad_link }));
+            rawWhatsappLeads = waLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "رقم العميل": item.customer_number, "رقم الحملة": item.campaign_id, "اسم الحملة": item.campaign_name, "رابط الإعلان": item.ad_link }));
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة": item.campaign || item.campaign_name }));
+            rawMessengerLeads = msgLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || item.customer_number, "اسم الحملة": item.campaign || item.campaign_name }));
+            
+            rawEasyOrders = easyOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.phone, "رقم بديل": item.phone_alt || "-", "اسم المنتج": item.product_name || "-", "مصدر الزيارة": item.utm_source || "غير محدد", "اسم الحملة": item.utm_campaign || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
 
             showSupabaseErrors(errors);
 
-            if (currentPlatform === 'messenger') {
-                allOrdersData = rawMessengerOrders;
-                allLeadsData = rawMessengerLeads;
-            } else {
-                allOrdersData = rawWhatsappOrders;
-                allLeadsData = rawWhatsappLeads;
-            }
+            if (currentPlatform === 'messenger') { allOrdersData = rawMessengerOrders; allLeadsData = rawMessengerLeads; } 
+            else if (currentPlatform === 'whatsapp') { allOrdersData = rawWhatsappOrders; allLeadsData = rawWhatsappLeads; } 
+            else { allOrdersData = rawEasyOrders; allLeadsData = []; }
 
             updateLiveTicker(allOrdersData);
             applyDateFilter();
 
-        } catch (error) {
-            console.error("خطأ في المزامنة اللحظية:", error);
-        }
+        } catch (error) { console.error("خطأ في المزامنة اللحظية:", error); }
     }
 </script>
 </body>
