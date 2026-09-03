@@ -1042,13 +1042,13 @@
                 "المحافظة": item.governorate,
                 "اسم المنتج": item.product_name,
                 "السعر": item.price,
-                "اسم الحملة": item.campaign || item.campaign_name
+                "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name
             }));
 
             rawMessengerLeads = msgLeadsResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "Sender ID": item.sender_id || item.customer_number,
-                "اسم الحملة": item.campaign || item.campaign_name
+                "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name
             }));
 
             rawEasyOrders = easyOrdersResult.data.map(item => ({
@@ -1744,8 +1744,8 @@
 
             rawWhatsappOrders = waOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "العنوان بالتفصيل": item.address, "كود المنتج sku": item.sku, "اسم المنتج": item.product_name, "السعر": item.price, "رقم الإعلان": item.ad_id, "اسم الإعلان": item.ad_name, "رابط الإعلان": item.ad_link }));
             rawWhatsappLeads = waLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "رقم العميل": item.customer_number, "رقم الحملة": item.campaign_id, "اسم الحملة": item.campaign_name, "رابط الإعلان": item.ad_link }));
-            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة": item.campaign || item.campaign_name }));
-            rawMessengerLeads = msgLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || item.customer_number, "اسم الحملة": item.campaign || item.campaign_name }));
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name }));
+            rawMessengerLeads = msgLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || item.customer_number, "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name }));
             
             rawEasyOrders = easyOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.phone, "رقم بديل": item.phone_alt || "-", "اسم المنتج": item.product_name || "-", "مصدر الزيارة": item.utm_source || "غير محدد", "اسم الحملة": item.utm_campaign || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
 
