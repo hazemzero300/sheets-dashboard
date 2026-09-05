@@ -1761,5 +1761,140 @@
         } catch (error) { console.error("خطأ في المزامنة اللحظية:", error); }
     }
 </script>
+
+<!-- === بداية إضافة هيرو ماسنجر الذكية === -->
+<script>
+    // 1. إضافة زر القسم الجديد في القائمة الجانبية بسلاسة
+    document.querySelector('.sidebar nav').insertAdjacentHTML('beforeend', `
+        <button class="nav-btn" id="nav-hero_messenger" onclick="switchPlatformHero('hero_messenger')">
+            🦸‍♂️ حملات هيرو ماسنجر
+        </button>
+    `);
+
+    // 2. تجهيز حاويات بيانات هيرو
+    let rawHeroOrders = [];
+    let rawHeroLeads = [];
+
+    // 3. جلب بيانات هيرو في الخلفية باستخدام دوال الاتصال القديمة
+    async function fetchHeroData() {
+        try {
+            const [ordersRes, leadsRes] = await Promise.all([
+                loadSupabaseTable('hero_successful_orders_messenger'),
+                loadSupabaseTable('hero_potential_customers')
+            ]);
+            
+            rawHeroOrders = (ordersRes.data || []).map(item => ({
+                "_rawDate": item.created_at,
+                "اسم العميل": item.customer_name,
+                "رقم الموبايل": item.mobile,
+                "المحافظة": item.governorate,
+                "اسم المنتج": item.product_name,
+                "السعر": item.price,
+                "اسم الحملة": item.campaign
+            }));
+
+            rawHeroLeads = (leadsRes.data || []).map(item => ({
+                "_rawDate": item.created_at,
+                "Sender ID": item.sender_id,
+                "اسم الحملة": item.campaign_id
+            }));
+            
+            // تحديث الشاشة فوراً لو العميل فاتح قسم هيرو وقت المزامنة
+            if(currentPlatform === 'hero_messenger') {
+                allOrdersData = rawHeroOrders;
+                allLeadsData = rawHeroLeads;
+                applyDateFilter();
+                updateLiveTickerHero(allOrdersData);
+            }
+        } catch (e) {
+            console.error("Hero Data Fetch Error:", e);
+        }
+    }
+    
+    // تشغيل جلب هيرو لأول مرة وربطه بالتحديث التلقائي
+    fetchHeroData();
+    setInterval(fetchHeroData, 60000);
+
+    // 4. اعتراض دالة تبديل الأقسام القديمة بذكاء لتشغيل هيرو
+    const originalSwitchPlatform = switchPlatform;
+    switchPlatform = function(platform) {
+        if (platform === 'hero_messenger') {
+            switchPlatformHero(platform);
+        } else {
+            originalSwitchPlatform(platform);
+        }
+    };
+
+    function switchPlatformHero(platform) {
+        currentPlatform = 'hero_messenger'; 
+        
+        // تفعيل لون الزر الجديد
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('nav-hero_messenger').classList.add('active');
+        
+        // تظبيط العناوين العلوية
+        document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--emerald); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">حملات هيرو ماسنجر</span>`;
+        
+        // إظهار الكروت المناسبة لهيرو
+        document.getElementById('leads-card').style.display = 'flex';
+        document.getElementById('leads-tab-btn').style.display = 'inline-block';
+        document.getElementById('revenue-card').style.display = 'flex';
+        document.getElementById('campaign-card').style.display = 'flex';
+        
+        // تحديث نصوص الكروت
+        document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات الناجحة';
+        document.getElementById('gov-chart-title').innerText = 'الانتشار الجغرافي';
+        document.getElementById('campaign-chart-title').innerText = 'أداء الحملات الإعلانية';
+
+        // إخفاء عمود رابط الإعلان الخاص بالواتساب
+        document.querySelectorAll('.ad-link-col').forEach(el => el.style.display = 'none');
+
+        // تمرير داتا هيرو للسيستم القديم
+        allOrdersData = rawHeroOrders;
+        allLeadsData = rawHeroLeads;
+        
+        resetFilter();
+        updateLiveTickerHero(allOrdersData);
+    }
+
+    // 5. تخصيص شريط الأخبار ليناسب هيرو ماسنجر
+    function updateLiveTickerHero(data) {
+        if (currentPlatform !== 'hero_messenger') return;
+        if (data.length > 0) {
+            let lastOrder = data[0]; 
+            let name = lastOrder["اسم العميل"] || "عميل";
+            let sku = lastOrder["اسم المنتج"] || "منتج";
+            let tickerText = `قام ${name} من (${lastOrder["المحافظة"] || "غير محدد"}) بطلب [${sku}] بقيمة ${lastOrder["السعر"] || 0} ج.م عبر هيرو ماسنجر منذ وقت قصير! 🦸‍♂️`;
+            document.getElementById('tickerText').innerText = tickerText;
+            document.getElementById('tickerContainer').style.display = 'flex';
+        } else {
+            document.getElementById('tickerContainer').style.display = 'none';
+        }
+    }
+    
+    const originalUpdateLiveTicker = updateLiveTicker;
+    updateLiveTicker = function(data) {
+        if(currentPlatform === 'hero_messenger'){
+            updateLiveTickerHero(data);
+        } else {
+            originalUpdateLiveTicker(data);
+        }
+    };
+
+    // 6. تخصيص زر تصدير Excel لتنسيق هيرو
+    const originalExportToCSV = exportToCSV;
+    exportToCSV = function() {
+        if(currentPlatform === 'hero_messenger'){
+            let temp = currentPlatform;
+            currentPlatform = 'messenger'; // خدعة مؤقتة لاستخدام تنسيق أعمدة الماسنجر في الطباعة
+            originalExportToCSV();
+            currentPlatform = temp;
+        } else {
+            originalExportToCSV();
+        }
+    };
+</script>
+<!-- === نهاية إضافة هيرو ماسنجر === -->
+
 </body>
 </html>
