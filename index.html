@@ -9,29 +9,31 @@
     
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
-            --card-bg: rgba(255, 255, 255, 0.85);
-            --emerald: #059669; 
-            --emerald-hover: #047857;
+            --bg-gradient: linear-gradient(135deg, #F0F4F8 0%, #E2E8F0 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            
+            --primary: #7C3AED; 
+            --primary-light: #EDE9FE;
+            --emerald: #10B981; 
             --emerald-light: #D1FAE5;
-            --text-dark: #0F172A;
+            
+            --text-dark: #1E293B;
             --text-muted: #64748B;
             --border-color: rgba(226, 232, 240, 0.8);
             --table-hover: rgba(248, 250, 252, 0.9);
-            --shadow-sm: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
-            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            --shadow-sm: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
             transition: all 0.4s ease;
         }
 
         body.dark-mode {
             --bg-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --text-dark: #F1F5F9;
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --text-dark: #F8FAFC;
             --text-muted: #94A3B8;
             --border-color: rgba(51, 65, 85, 0.6);
             --table-hover: rgba(51, 65, 85, 0.4);
-            --emerald-light: rgba(5, 150, 105, 0.2);
-            --shadow-sm: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            --shadow-sm: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
         }
 
         body { 
@@ -63,13 +65,14 @@
             flex-direction: column;
             gap: 20px;
             box-sizing: border-box;
+            border-radius: 20px;
         }
 
         .sidebar-brand {
             text-align: center;
             margin-bottom: 20px;
             padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px dashed var(--border-color);
         }
 
         .sidebar-brand h2 {
@@ -81,7 +84,10 @@
         }
         
         .sidebar-brand span {
-            color: var(--emerald);
+            color: var(--primary);
+            background: -webkit-linear-gradient(45deg, #7C3AED, #EC4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .nav-btn {
@@ -90,30 +96,33 @@
             width: 100%;
             text-align: right;
             padding: 15px 20px;
-            border-radius: 12px;
+            border-radius: 14px;
             font-family: 'Tajawal', sans-serif;
             font-size: 1.1em;
             font-weight: 700;
             color: var(--text-muted);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .nav-btn:hover {
             background: var(--table-hover);
-            border-color: var(--border-color);
+            transform: translateX(-5px);
         }
 
         .nav-btn.active {
-            background: var(--emerald-light);
-            color: var(--emerald);
-            border-color: rgba(5, 150, 105, 0.2);
-            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.1);
-            transform: translateX(-5px);
+            background: var(--primary-light);
+            color: var(--primary);
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
+            transform: translateX(-8px);
+        }
+        
+        body.dark-mode .nav-btn.active {
+            background: rgba(124, 58, 237, 0.2);
         }
 
         .main-content {
@@ -128,9 +137,9 @@
 
         .glass-panel {
             background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 20px;
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-sm);
         }
@@ -139,7 +148,7 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            margin-bottom: 20px; 
+            margin-bottom: 25px; 
             padding: 20px 30px;
             animation: fadeUp 0.6s ease-out;
         }
@@ -155,7 +164,6 @@
             font-weight: 800; 
             margin: 0; 
             color: var(--text-dark); 
-            letter-spacing: -0.5px; 
         }
         
         .header-tag {
@@ -165,7 +173,7 @@
             border-radius: 20px; 
             font-weight: 700; 
             font-size: 0.9em;
-            box-shadow: 0 2px 10px rgba(5, 150, 105, 0.1);
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
             animation: pulse 2s infinite;
         }
 
@@ -183,7 +191,6 @@
             justify-content: center;
             transition: all 0.3s; 
             box-shadow: var(--shadow-sm);
-            backdrop-filter: blur(5px);
         }
 
         .theme-toggle:hover { 
@@ -191,15 +198,16 @@
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
         .live-ticker {
-            background: var(--emerald-light);
-            color: var(--emerald);
-            padding: 10px 20px;
+            background: linear-gradient(90deg, var(--primary-light), rgba(255,255,255,0));
+            border-right: 4px solid var(--primary);
+            color: var(--primary);
+            padding: 12px 20px;
             border-radius: 12px;
             margin-bottom: 30px;
             display: flex; 
@@ -211,9 +219,13 @@
             animation: fadeUp 0.65s ease-out;
             position: relative;
         }
+        
+        body.dark-mode .live-ticker {
+            background: linear-gradient(90deg, rgba(124, 58, 237, 0.2), rgba(0,0,0,0));
+        }
 
         .ticker-badge { 
-            background: var(--emerald); 
+            background: var(--primary); 
             color: white; 
             padding: 6px 12px; 
             border-radius: 8px; 
@@ -221,7 +233,7 @@
             white-space: nowrap; 
             z-index: 2; 
             position: relative;
-            box-shadow: 0 0 10px rgba(5, 150, 105, 0.3); 
+            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3); 
         }
 
         .ticker-wrapper {
@@ -248,7 +260,7 @@
             margin-bottom: 30px;
             display: flex; 
             flex-direction: column; 
-            gap: 15px;
+            gap: 20px;
             animation: fadeUp 0.7s ease-out;
         }
         
@@ -270,42 +282,41 @@
             background: var(--border-color); 
             color: var(--text-dark); 
             border: none; 
-            padding: 8px 16px; 
+            padding: 8px 18px; 
             border-radius: 20px;
             font-family: 'Tajawal', sans-serif; 
             font-size: 0.85em; 
             font-weight: 700; 
             cursor: pointer; 
             transition: all 0.2s; 
-            backdrop-filter: blur(5px);
         }
 
         .chip:hover { 
-            background: var(--emerald); 
+            background: var(--primary); 
             color: white; 
             transform: translateY(-2px); 
         }
 
         .export-btn {
-            background: #10B981; 
+            background: linear-gradient(135deg, #10B981, #059669); 
             color: white; 
             border: none; 
-            padding: 8px 16px; 
+            padding: 10px 20px; 
             border-radius: 20px;
             font-family: 'Tajawal', sans-serif; 
-            font-size: 0.85em; 
+            font-size: 0.9em; 
             font-weight: 700; 
             cursor: pointer;
             display: flex; 
             align-items: center; 
-            gap: 6px; 
+            gap: 8px; 
             transition: all 0.2s; 
-            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
         }
 
         .export-btn:hover { 
-            background: #059669; 
             transform: translateY(-2px); 
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
         }
 
         .filter-row { 
@@ -331,25 +342,51 @@
             font-family: 'Tajawal', sans-serif; 
             padding: 10px 15px;
             border: 1px solid var(--border-color); 
-            border-radius: 10px;
+            border-radius: 12px;
             background: var(--card-bg); 
             color: var(--text-dark);
             outline: none; 
-            font-weight: 500; 
+            font-weight: 600; 
             transition: all 0.3s; 
             color-scheme: light dark;
         }
 
         input[type="date"]:focus { 
-            border-color: var(--emerald); 
-            box-shadow: 0 0 0 3px var(--emerald-light); 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px var(--primary-light); 
+        }
+
+        .search-container {
+            flex-grow: 1;
+            min-width: 280px;
+        }
+        
+        .search-input {
+            width: 100%;
+            font-family: 'Tajawal', sans-serif;
+            padding: 12px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            outline: none;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
         }
 
         .btn {
             font-family: 'Tajawal', sans-serif; 
             padding: 10px 24px; 
             border: none;
-            border-radius: 10px; 
+            border-radius: 12px; 
             font-weight: 700; 
             cursor: pointer; 
             transition: all 0.3s ease; 
@@ -357,14 +394,14 @@
         }
 
         .btn-primary { 
-            background-color: var(--emerald); 
+            background: linear-gradient(135deg, var(--primary), #6D28D9); 
             color: white; 
-            box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2); 
+            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3); 
         }
 
         .btn-primary:hover { 
-            background-color: var(--emerald-hover); 
             transform: translateY(-2px); 
+            box-shadow: 0 6px 15px rgba(124, 58, 237, 0.4); 
         }
 
         .btn-secondary { 
@@ -392,72 +429,69 @@
             animation: fadeUp 0.8s ease-out backwards; 
             position: relative; 
             overflow: hidden;
+            border-radius: 20px;
+            border: none;
         }
 
-        .card::before {
-            content: ''; 
-            position: absolute; 
-            top: -50%; 
-            left: -50%; 
-            width: 200%; 
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-            transform: rotate(45deg); 
+        .card::after {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
             pointer-events: none;
         }
 
         .card:hover { 
-            box-shadow: var(--shadow-md); 
-            transform: translateY(-5px); 
-            border-color: var(--emerald-light); 
-        }
-
-        .card h3 { 
-            margin: 0; 
-            font-size: 1.05em; 
-            color: var(--text-muted); 
-            font-weight: 700; 
-        }
-
-        .card p { 
-            margin: 12px 0 0; 
-            font-size: 2.2em; 
-            font-weight: 800; 
-            color: var(--text-dark); 
-        }
-
-        .card .subtitle { 
-            font-size: 0.85em; 
-            color: var(--emerald); 
-            font-weight: 700; 
-            margin-top: 5px; 
+            transform: translateY(-8px); 
         }
         
-        .revenue-text { color: var(--emerald) !important; }
-        .sku-text { color: #3B82F6 !important; font-size: 1.8em !important; }
-        .leads-text { color: #F59E0B !important; }
+        .card-revenue { background: linear-gradient(135deg, #10B981, #047857); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); }
+        .card-sku { background: linear-gradient(135deg, #3B82F6, #1D4ED8); box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3); }
+        .card-orders { background: linear-gradient(135deg, #8B5CF6, #6D28D9); box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); }
+        .card-leads { background: linear-gradient(135deg, #F59E0B, #B45309); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3); }
+
+        .card h3 { margin: 0; font-size: 1.05em; color: rgba(255,255,255,0.9); font-weight: 700; }
+        .card p { margin: 12px 0 0; font-size: 2.3em; font-weight: 800; color: #ffffff; }
+        .card .subtitle { font-size: 0.85em; color: rgba(255,255,255,0.8); font-weight: 700; margin-top: 5px; }
 
         .charts-container { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
             gap: 24px; 
             margin-bottom: 30px; 
         }
 
         .chart-box { 
             padding: 30px; 
-            height: 400px; 
+            height: 420px; 
             display: flex; 
             flex-direction: column;
             transition: box-shadow 0.3s; 
             animation: fadeUp 0.9s ease-out backwards;
+            border-radius: 20px;
         }
 
         .chart-title { 
             font-size: 1.2em; 
             font-weight: 800; 
             color: var(--text-dark); 
-            margin-bottom: 20px; 
+            margin-bottom: 25px; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-title::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+            background: var(--primary);
         }
 
         .chart-wrapper { 
@@ -468,10 +502,11 @@
         .table-section { 
             padding: 30px; 
             animation: fadeUp 1s ease-out backwards; 
+            border-radius: 20px;
         }
 
         .table-wrapper { 
-            max-height: 450px; 
+            max-height: 500px; 
             overflow-y: auto; 
             border-radius: 12px; 
             border: 1px solid var(--border-color); 
@@ -480,7 +515,7 @@
         .tabs { 
             display: flex; 
             gap: 15px; 
-            margin-bottom: 20px; 
+            margin-bottom: 25px; 
             border-bottom: 2px solid var(--border-color); 
             padding-bottom: 15px; 
         }
@@ -504,36 +539,33 @@
         }
 
         .tab-btn.active { 
-            background: var(--emerald-light); 
-            color: var(--emerald); 
-            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.1); 
+            background: var(--primary-light); 
+            color: var(--primary); 
+            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.1); 
         }
+        
+        body.dark-mode .tab-btn.active { background: rgba(124, 58, 237, 0.2); }
 
         .tab-content { 
             display: none; 
             animation: fadeUp 0.4s ease-out; 
         }
 
-        .tab-content.active { 
-            display: block; 
-        }
+        .tab-content.active { display: block; }
 
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            text-align: right; 
-        }
+        table { width: 100%; border-collapse: collapse; text-align: right; }
 
         thead { 
-            background-color: rgba(0,0,0,0.02); 
+            background-color: var(--card-bg); 
             position: sticky; 
             top: 0; 
             z-index: 1; 
             backdrop-filter: blur(10px); 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
         }
 
         th { 
-            padding: 18px 16px; 
+            padding: 20px 16px; 
             font-weight: 800; 
             color: var(--text-muted); 
             border-bottom: 2px solid var(--border-color); 
@@ -542,30 +574,27 @@
 
         td { 
             padding: 16px; 
-            border-bottom: 1px solid var(--border-color); 
+            border-bottom: 1px dashed var(--border-color); 
             color: var(--text-dark); 
             font-size: 0.95em; 
             transition: background-color 0.2s; 
         }
 
-        tr:hover td { 
-            background-color: var(--table-hover); 
-            cursor: default; 
-        }
-
-        tr:last-child td { 
-            border-bottom: none; 
-        }
+        tr:hover td { background-color: var(--table-hover); }
+        tr:last-child td { border-bottom: none; }
 
         .campaign-badge { 
-            background-color: var(--emerald-light); 
-            color: var(--emerald); 
+            background-color: var(--primary-light); 
+            color: var(--primary); 
             padding: 6px 12px; 
             border-radius: 8px; 
             font-size: 0.85em; 
             font-weight: 700; 
-            border: 1px solid rgba(5, 150, 105, 0.2); 
+            border: 1px solid rgba(124, 58, 237, 0.2); 
+            display: inline-block;
         }
+        
+        body.dark-mode .campaign-badge { background: rgba(124, 58, 237, 0.2); }
 
         .organic-badge { 
             background-color: var(--border-color); 
@@ -574,6 +603,7 @@
             border-radius: 8px; 
             font-size: 0.85em; 
             font-weight: 700; 
+            display: inline-block;
         }
 
         .status-badge {
@@ -586,8 +616,8 @@
         }
 
         .link-btn {
-            background: var(--emerald-light);
-            color: var(--emerald);
+            background: var(--primary-light);
+            color: var(--primary);
             padding: 6px 12px;
             border-radius: 8px;
             text-decoration: none;
@@ -597,49 +627,33 @@
             align-items: center;
             gap: 5px;
             transition: all 0.2s;
-            border: 1px solid rgba(5, 150, 105, 0.2);
+            border: 1px solid rgba(124, 58, 237, 0.2);
         }
+        
+        body.dark-mode .link-btn { background: rgba(124, 58, 237, 0.2); }
 
         .link-btn:hover {
-            background: var(--emerald);
+            background: var(--primary);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
+            box-shadow: 0 4px 6px rgba(124, 58, 237, 0.2);
         }
 
         #loading { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            gap: 20px; 
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg-gradient);
-            z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; gap: 20px; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-gradient); z-index: 9999;
         }
 
         .spinner { 
-            width: 50px; 
-            height: 50px; 
-            border: 5px solid var(--emerald-light); 
-            border-top: 5px solid var(--emerald); 
-            border-radius: 50%; 
-            animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; 
+            width: 50px; height: 50px; 
+            border: 5px solid var(--primary-light); border-top: 5px solid var(--primary); 
+            border-radius: 50%; animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; 
         }
 
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .loading-text { 
-            font-size: 1.2em; 
-            font-weight: 700; 
-            color: var(--emerald); 
-            letter-spacing: 0.5px; 
-        }
+        .loading-text { font-size: 1.2em; font-weight: 700; color: var(--primary); letter-spacing: 0.5px; }
 
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.02); border-radius: 8px; }
@@ -651,6 +665,7 @@
             .sidebar { width: 100%; height: auto; position: static; padding: 15px; gap: 10px; }
             .sidebar nav { display: flex; gap: 10px; flex-wrap: wrap;}
             .nav-btn { text-align: center; justify-content: center; margin-bottom: 0; padding: 10px; font-size: 0.95em; flex: 1; min-width: 140px;}
+            .charts-container { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -683,7 +698,7 @@
 
     <main class="main-content">
         <div class="header glass-panel">
-            <h1 id="dashboard-title">نظرة عامة <span style="color: var(--emerald); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">الماسنجر</span></h1>
+            <h1 id="dashboard-title">نظرة عامة <span style="color: var(--primary); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">الماسنجر</span></h1>
             <div class="header-right">
                 <div class="header-tag">Supabase Live 🟢</div>
                 <button class="theme-toggle" onclick="toggleDarkMode()" id="theme-icon" title="تغيير المظهر">🌙</button>
@@ -704,7 +719,7 @@
                     <button class="chip" onclick="setQuickDate('yesterday')">الأمس</button>
                     <button class="chip" onclick="setQuickDate('week')">آخر 7 أيام</button>
                     <button class="chip" onclick="setQuickDate('month')">آخر 30 يوم</button>
-                    <button class="chip" onclick="setQuickDate('all')" id="btnAllTime" style="background: var(--emerald); color: white;">كل الأوقات</button>
+                    <button class="chip" onclick="setQuickDate('all')" id="btnAllTime" style="background: var(--primary); color: white;">كل الأوقات</button>
                 </div>
                 <button class="export-btn" onclick="exportToCSV()" title="تصدير البيانات الحالية كملف Excel">
                     📥 تصدير CSV
@@ -712,6 +727,10 @@
             </div>
             
             <div class="filter-row">
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 ابحث بالاسم، الموبايل، كود المنتج، أو المعرف..." oninput="applyFilters()">
+                </div>
+                
                 <div class="filter-group">
                     <label>من:</label>
                     <input type="date" id="startDate" autocomplete="off">
@@ -720,45 +739,51 @@
                     <label>إلى:</label>
                     <input type="date" id="endDate" autocomplete="off">
                 </div>
-                <button class="btn btn-primary" onclick="applyDateFilter()">تطبيق الفلتر</button>
+                <button class="btn btn-primary" onclick="applyFilters()">تطبيق الفلتر</button>
                 <button class="btn btn-secondary" onclick="resetFilter()">إعادة ضبط</button>
             </div>
         </div>
 
         <div class="cards">
-            <!-- كارت المبيعات (يظهر فقط في الماسنجر والواتساب) -->
-            <div class="card glass-panel" id="revenue-card">
+            <div class="card card-revenue" id="revenue-card">
                 <h3>إجمالي المبيعات (ج.م)</h3>
-                <p id="total-revenue" class="revenue-text">0</p>
+                <p id="total-revenue">0</p>
             </div>
             
-            <div class="card glass-panel" id="sku-card">
+            <div class="card card-sku" id="sku-card">
                 <h3>المنتج الأكثر مبيعاً</h3>
-                <p id="top-sku" class="sku-text">-</p>
+                <p id="top-sku">-</p>
                 <div id="top-sku-count" class="subtitle">0 طلبات</div>
             </div>
             
-            <div class="card glass-panel">
+            <div class="card card-orders">
                 <h3 id="orders-card-title">إجمالي الطلبات الناجحة</h3>
                 <p id="total-orders">0</p>
             </div>
             
-            <div class="card glass-panel" id="leads-card">
+            <div class="card card-leads" id="leads-card">
                 <h3>إجمالي العملاء المحتملين</h3>
-                <p id="total-leads" class="leads-text">0</p>
+                <p id="total-leads">0</p>
             </div>
         </div>
 
         <div class="charts-container">
-            <div class="chart-box glass-panel">
+            <div class="chart-box glass-panel" id="gov-card">
                 <div class="chart-title" id="gov-chart-title">الانتشار الجغرافي</div>
                 <div class="chart-wrapper">
                     <canvas id="govChart"></canvas>
                 </div>
             </div>
             
+            <div class="chart-box glass-panel" id="status-card">
+                <div class="chart-title">توزيع حالات الطلبات</div>
+                <div class="chart-wrapper">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
             <div class="chart-box glass-panel">
-                <div class="chart-title">توزيع المنتجات المباعة</div>
+                <div class="chart-title">المنتجات المباعة</div>
                 <div class="chart-wrapper">
                     <canvas id="productChart"></canvas>
                 </div>
@@ -796,7 +821,7 @@
                             <tr>
                                 <th>التاريخ</th>
                                 <th>Sender ID (معرف العميل)</th>
-                                <th>اسم / رقم الحملة</th>
+                                <th>اسم الحملة</th>
                                 <th class="ad-link-col">رابط الإعلان</th>
                             </tr>
                         </thead>
@@ -817,6 +842,15 @@
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_c0sSu98qpEQzK4pouqy8rA_6YiYMX5G';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     
+    function cleanCampaignName(rawName) {
+        if (!rawName || String(rawName).trim() === "") return "أورجانيك";
+        let str = String(rawName);
+        let cleaned = str.replace(/\d{10,}/g, '');
+        cleaned = cleaned.replace(/^[-_:\s]+|[-_:\s]+$/g, ''); 
+        cleaned = cleaned.replace(/[-_]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+        return cleaned === "" ? "حملة إعلانية" : cleaned;
+    }
+
     const statusTranslations = {
         'created': { text: 'تم الإنشاء', color: '#3B82F6', bgColor: '#EFF6FF' },
         'pending': { text: 'قيد المراجعة', color: '#D97706', bgColor: '#FEF3C7' },
@@ -851,12 +885,14 @@
     let govCategoryMap = {}; 
 
     let govChartInstance = null;
+    let statusChartInstance = null; 
     let campaignChartInstance = null;
     let productChartInstance = null; 
 
     window.onload = function() {
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
+        document.getElementById('searchInput').value = '';
         initTheme(); 
         fetchData(); 
         setInterval(syncDataBackground, 60000);
@@ -885,7 +921,7 @@
         document.getElementById('nav-' + platform).classList.add('active');
 
         let titleSpan = platform === 'messenger' ? 'الماسنجر' : (platform === 'whatsapp' ? 'الواتساب' : 'إيزي أوردرز');
-        document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--emerald); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">${titleSpan}</span>`;
+        document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--primary); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">${titleSpan}</span>`;
 
         if (platform === 'easy_orders') {
             allOrdersData = rawEasyOrders;
@@ -894,9 +930,9 @@
             document.getElementById('leads-card').style.display = 'none';
             document.getElementById('leads-tab-btn').style.display = 'none';
             document.getElementById('revenue-card').style.display = 'none';
+            document.getElementById('gov-card').style.display = 'none';
             
             document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات';
-            document.getElementById('gov-chart-title').innerText = 'توزيع حالات الطلبات';
             document.getElementById('campaign-chart-title').innerText = 'مصادر الزيارات (نسب المنصات)';
             
             switchTab('orders');
@@ -904,9 +940,9 @@
             document.getElementById('leads-card').style.display = 'flex';
             document.getElementById('leads-tab-btn').style.display = 'inline-block';
             document.getElementById('revenue-card').style.display = 'flex';
+            document.getElementById('gov-card').style.display = 'flex'; 
             
             document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات الناجحة';
-            document.getElementById('gov-chart-title').innerText = 'الانتشار الجغرافي';
             document.getElementById('campaign-chart-title').innerText = 'أداء الحملات الإعلانية';
 
             if (platform === 'messenger') {
@@ -1023,15 +1059,18 @@
                 "اسم المنتج": item.product_name,
                 "السعر": item.price,
                 "رقم الإعلان": item.ad_id,
-                "اسم الإعلان": item.ad_name,
-                "رابط الإعلان": item.ad_link
+                "اسم الحملة النظيف": cleanCampaignName(item.ad_name),
+                "اسم الحملة الأصلي": item.ad_name || "أورجانيك",
+                "رابط الإعلان": item.ad_link,
+                "حالة الطلب": item.order_status || "created"
             }));
 
             rawWhatsappLeads = waLeadsResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "رقم العميل": item.customer_number,
                 "رقم الحملة": item.campaign_id,
-                "اسم الحملة": item.campaign_name,
+                "اسم الحملة النظيف": cleanCampaignName(item.campaign_name),
+                "اسم الحملة الأصلي": item.campaign_name || "أورجانيك",
                 "رابط الإعلان": item.ad_link
             }));
 
@@ -1042,13 +1081,16 @@
                 "المحافظة": item.governorate,
                 "اسم المنتج": item.product_name,
                 "السعر": item.price,
-                "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name
+                "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name),
+                "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك",
+                "حالة الطلب": item.order_status || "created"
             }));
 
             rawMessengerLeads = msgLeadsResult.data.map(item => ({
                 "_rawDate": item.created_at,
                 "Sender ID": item.sender_id || item.customer_number,
-                "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name
+                "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name),
+                "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك"
             }));
 
             rawEasyOrders = easyOrdersResult.data.map(item => ({
@@ -1058,7 +1100,8 @@
                 "رقم بديل": item.phone_alt || "-",
                 "اسم المنتج": item.product_name || "-",
                 "مصدر الزيارة": item.utm_source || "غير محدد",
-                "اسم الحملة": item.utm_campaign || "أورجانيك",
+                "اسم الحملة النظيف": cleanCampaignName(item.utm_campaign),
+                "اسم الحملة الأصلي": item.utm_campaign || "أورجانيك",
                 "حالة الطلب": item.order_status || "created"
             }));
 
@@ -1115,14 +1158,14 @@
                     let phoneAlt = row["رقم بديل"] || "-";
                     let sku = row["اسم المنتج"] || "-";
                     let source = row["مصدر الزيارة"] || "-";
-                    let campaign = row["اسم الحملة"] || "-";
+                    let campaign = row["اسم الحملة الأصلي"] || "-";
                     let statusTrans = statusTranslations[row["حالة الطلب"]]?.text || row["حالة الطلب"];
                     
                     csvContent += `${date},${name},${phone},${phoneAlt},${sku},${source},${campaign},${statusTrans}\n`;
                 });
             } else {
                 let showAdLink = currentPlatform === 'whatsapp';
-                csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,المصدر\n";
+                csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب\n";
                 exportData.forEach(row => {
                     let date = formatExportDate(row["_rawDate"]);
                     let name = (row["اسم العميل"] || "-").replace(/,/g, " "); 
@@ -1130,10 +1173,10 @@
                     let gov = row["المحافظة"] || "-";
                     let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
                     let price = row["السعر"] || "0";
-                    let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
-                    if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
+                    let campaign = row["اسم الحملة الأصلي"] || "أورجانيك";
+                    let statusTrans = statusTranslations[row["حالة الطلب"]]?.text || row["حالة الطلب"] || "created";
                     
-                    csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign}`;
+                    csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign},${statusTrans}`;
                     if (showAdLink) {
                         let adLink = row["رابط الإعلان"] || "أورجانيك";
                         csvContent += `,${adLink}`;
@@ -1147,7 +1190,7 @@
             exportData.forEach(row => {
                 let date = formatExportDate(row["_rawDate"]);
                 let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "-";
+                let campaign = row["اسم الحملة الأصلي"] || "-";
 
                 csvContent += `${date},${senderId},${campaign}`;
                 if (showAdLink) {
@@ -1195,7 +1238,7 @@
             btn.style.background = '';
             btn.style.color = '';
         });
-        event.currentTarget.style.background = 'var(--emerald)';
+        event.currentTarget.style.background = 'var(--primary)';
         event.currentTarget.style.color = 'white';
 
         let today = new Date();
@@ -1223,18 +1266,19 @@
         } else if (type === 'all') {
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
-            applyDateFilter();
+            applyFilters();
             return;
         }
 
         document.getElementById('startDate').value = startStr;
         document.getElementById('endDate').value = endStr;
-        applyDateFilter();
+        applyFilters();
     }
 
-    function applyDateFilter() {
+    function applyFilters() {
         let startVal = document.getElementById('startDate').value;
         let endVal = document.getElementById('endDate').value;
+        let query = document.getElementById('searchInput').value.toLowerCase().trim();
 
         if (startVal && endVal) {
             if (new Date(startVal) > new Date(endVal)) {
@@ -1246,43 +1290,47 @@
             }
         }
 
-        if (!startVal && !endVal) {
-            currentFilteredData = allOrdersData;
-            currentFilteredLeads = allLeadsData;
-            processData(allOrdersData, allLeadsData);
-            return;
-        }
-
         currentFilteredData = allOrdersData.filter(row => {
-            if (!row._rawDate) return false;
             let rowDate = new Date(row._rawDate);
-            if (isNaN(rowDate.getTime())) return false; 
-            let isAfterStart = true, isBeforeEnd = true;
+            let isValidDate = true;
             if (startVal) { 
                 let sDate = new Date(startVal); sDate.setHours(0,0,0,0); 
-                isAfterStart = rowDate >= sDate; 
+                isValidDate = isValidDate && rowDate >= sDate; 
             }
             if (endVal) { 
                 let eDate = new Date(endVal); eDate.setHours(23,59,59,999); 
-                isBeforeEnd = rowDate <= eDate; 
+                isValidDate = isValidDate && rowDate <= eDate; 
             }
-            return isAfterStart && isBeforeEnd;
+            
+            let matchSearch = true;
+            if (query !== "") {
+                let name = String(row["اسم العميل"] || "").toLowerCase();
+                let phone = String(row["رقم الموبايل"] || "").toLowerCase();
+                let sku = String(row["اسم المنتج"] || row["كود المنتج sku"] || "").toLowerCase();
+                matchSearch = name.includes(query) || phone.includes(query) || sku.includes(query);
+            }
+            return isValidDate && matchSearch;
         });
 
         currentFilteredLeads = allLeadsData.filter(row => {
-            if (!row._rawDate) return false;
             let rowDate = new Date(row._rawDate);
-            if (isNaN(rowDate.getTime())) return false; 
-            let isAfterStart = true, isBeforeEnd = true;
+            let isValidDate = true;
             if (startVal) { 
                 let sDate = new Date(startVal); sDate.setHours(0,0,0,0); 
-                isAfterStart = rowDate >= sDate; 
+                isValidDate = isValidDate && rowDate >= sDate; 
             }
             if (endVal) { 
                 let eDate = new Date(endVal); eDate.setHours(23,59,59,999); 
-                isBeforeEnd = rowDate <= eDate; 
+                isValidDate = isValidDate && rowDate <= eDate; 
             }
-            return isAfterStart && isBeforeEnd;
+            
+            let matchSearch = true;
+            if (query !== "") {
+                let senderId = String(row["Sender ID"] || row["رقم العميل"] || "").toLowerCase();
+                let camp = String(row["اسم الحملة النظيف"] || "").toLowerCase();
+                matchSearch = senderId.includes(query) || camp.includes(query);
+            }
+            return isValidDate && matchSearch;
         });
 
         processData(currentFilteredData, currentFilteredLeads);
@@ -1291,17 +1339,16 @@
     function resetFilter() { 
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
+        document.getElementById('searchInput').value = '';
         
         document.querySelectorAll('.chip').forEach(btn => {
             btn.style.background = '';
             btn.style.color = '';
         });
-        document.getElementById('btnAllTime').style.background = 'var(--emerald)';
+        document.getElementById('btnAllTime').style.background = 'var(--primary)';
         document.getElementById('btnAllTime').style.color = 'white';
         
-        currentFilteredData = allOrdersData;
-        currentFilteredLeads = allLeadsData;
-        processData(allOrdersData, allLeadsData);
+        applyFilters();
     }
 
     function animateValue(id, start, end, duration) {
@@ -1326,7 +1373,18 @@
         }, stepTime);
     }
 
-    const tooltipPercentageCallback = {
+    const tooltipBarPercentageCallback = {
+        label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) label += ': ';
+            let value = context.raw;
+            let total = context.dataset.data.reduce((a, b) => a + b, 0);
+            let percentage = total > 0 ? Math.round((value / total) * 100) + '%' : '0%';
+            return label + value + ' طلب (' + percentage + ')';
+        }
+    };
+    
+    const tooltipPolarPercentageCallback = {
         label: function(context) {
             let label = context.label || '';
             if (label) label += ': ';
@@ -1342,89 +1400,132 @@
         govCategoryMap = {};
 
         let totalOrders = data.length;
-        let rawCategoryCounts = {};
+        let govCategoryCounts = {};
+        let statusCategoryCounts = {};
 
         data.forEach(row => {
-            let categoryField = currentPlatform === 'easy_orders' ? (row["حالة الطلب"] || "غير محدد") : (row["المحافظة"] || "غير محدد");
-            rawCategoryCounts[categoryField] = (rawCategoryCounts[categoryField] || 0) + 1;
+            if (currentPlatform !== 'easy_orders') {
+                let govField = row["المحافظة"] || "غير محدد";
+                govCategoryCounts[govField] = (govCategoryCounts[govField] || 0) + 1;
+            }
+            
+            let statusField = row["حالة الطلب"] || "created";
+            statusCategoryCounts[statusField] = (statusCategoryCounts[statusField] || 0) + 1;
         });
 
-        let cleanCategoryCounts = {};
+        let cleanGovCounts = {};
         let othersDetails = []; 
         let othersCount = 0;
         let threshold = totalOrders * 0.03; 
 
-        for (const [key, count] of Object.entries(rawCategoryCounts)) {
-            if (count < threshold && currentPlatform !== 'easy_orders') {
-                othersCount += count;
-                othersDetails.push(`- ${key}: ${count} طلب`); 
-                govCategoryMap[key] = 'أخرى';
-            } else { 
-                cleanCategoryCounts[key] = count; 
-                govCategoryMap[key] = key;
+        if (currentPlatform !== 'easy_orders') {
+            for (const [key, count] of Object.entries(govCategoryCounts)) {
+                if (count < threshold) {
+                    othersCount += count;
+                    othersDetails.push(`- ${key}: ${count} طلب`); 
+                    govCategoryMap[key] = 'أخرى';
+                } else { 
+                    cleanGovCounts[key] = count; 
+                    govCategoryMap[key] = key;
+                }
             }
+            if (othersCount > 0) cleanGovCounts['أخرى'] = othersCount; 
         }
-        if (othersCount > 0 && currentPlatform !== 'easy_orders') cleanCategoryCounts['أخرى'] = othersCount; 
 
         if (govChartInstance) govChartInstance.destroy();
+        if (statusChartInstance) statusChartInstance.destroy(); 
 
         let isDark = document.body.classList.contains('dark-mode');
         let chartTextColor = isDark ? '#F1F5F9' : '#0F172A';
-        let tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(30, 41, 59, 0.95)';
-        const defaultDistinctColors = ['#059669', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EA580C', '#4F46E5', '#BE123C', '#1D4ED8', '#B45309', '#047857'];
+        let gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+        let tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+        let tooltipColor = isDark ? '#F1F5F9' : '#0F172A';
+        const colorfulPalette = ['#EC4899', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F43F5E', '#8B5CF6', '#14B8A6', '#F97316', '#6366F1'];
         
-        let chartLabels = [];
-        let chartData = [];
-        let chartColors = [];
-
-        if (currentPlatform === 'easy_orders') {
-            for (const [status, count] of Object.entries(cleanCategoryCounts)) {
-                let trans = statusTranslations[status];
-                chartLabels.push(trans ? trans.text : status);
-                chartData.push(count);
-                chartColors.push(trans ? trans.color : '#64748B');
-            }
-        } else {
-            chartLabels = Object.keys(cleanCategoryCounts);
-            chartData = Object.values(cleanCategoryCounts);
-            chartColors = defaultDistinctColors;
+        if (currentPlatform !== 'easy_orders' && currentPlatform !== 'hero_messenger') {
+            govChartInstance = new Chart(document.getElementById('govChart'), {
+                type: 'polarArea',
+                data: { 
+                    labels: Object.keys(cleanGovCounts), 
+                    datasets: [{ 
+                        data: Object.values(cleanGovCounts), 
+                        backgroundColor: colorfulPalette.map(color => color + 'CC'),
+                        borderWidth: 2, 
+                        borderColor: isDark ? '#1E293B' : '#FFFFFF'
+                    }] 
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { animateScale: true, animateRotate: true, duration: 1000, easing: 'easeOutQuart' },
+                    scales: { r: { ticks: { display: false }, grid: { color: gridColor } } },
+                    plugins: { 
+                        legend: { 
+                            position: 'right', 
+                            labels: { color: chartTextColor, padding: 15, font: { size: 13, weight: 700 }, usePointStyle: true, pointStyle: 'circle' },
+                            onClick: function(e, legendItem, legend) {
+                                const index = legendItem.index;
+                                const chart = legend.chart;
+                                const label = legendItem.text;
+                                chart.toggleDataVisibility(index);
+                                chart.update();
+                                if (!chart.getDataVisibility(index)) {
+                                    if (!hiddenGovLabels.includes(label)) hiddenGovLabels.push(label);
+                                } else {
+                                    hiddenGovLabels = hiddenGovLabels.filter(l => l !== label);
+                                }
+                                applyCrossFilter(leadsData); 
+                            }
+                        },
+                        tooltip: { 
+                            backgroundColor: tooltipBg, titleColor: tooltipColor, bodyColor: tooltipColor, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12, borderColor: gridColor, borderWidth: 1,
+                            callbacks: {
+                                label: tooltipPolarPercentageCallback.label,
+                                afterBody: function(context) { return context[0].label === 'أخرى' ? '\nالتفاصيل:\n' + othersDetails.join('\n') : ''; } 
+                            } 
+                        }
+                    } 
+                }
+            });
         }
 
-        govChartInstance = new Chart(document.getElementById('govChart'), {
-            type: 'doughnut',
+        let statusLabels = [];
+        let statusData = [];
+        let statusColors = [];
+        
+        for (const [status, count] of Object.entries(statusCategoryCounts)) {
+            let trans = statusTranslations[status];
+            statusLabels.push(trans ? trans.text : status);
+            statusData.push(count);
+            statusColors.push(trans ? trans.color : '#8B5CF6'); 
+        }
+
+        statusChartInstance = new Chart(document.getElementById('statusChart'), {
+            type: 'bar',
             data: { 
-                labels: chartLabels, 
+                labels: statusLabels, 
                 datasets: [{ 
-                    data: chartData, backgroundColor: chartColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 
+                    label: 'عدد الطلبات',
+                    data: statusData, 
+                    backgroundColor: statusColors, 
+                    borderRadius: 6,
+                    barThickness: 'flex',
+                    maxBarThickness: 40,
+                    minBarLength: 15
                 }] 
             },
             options: { 
-                responsive: true, maintainAspectRatio: false, cutout: '70%',
-                animation: { animateScale: true, animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
+                responsive: true, maintainAspectRatio: false, 
+                indexAxis: 'y', 
+                animation: { duration: 1000, easing: 'easeOutQuart' },
+                scales: { 
+                    x: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
+                    y: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
+                },
                 plugins: { 
-                    legend: { 
-                        position: 'right', 
-                        labels: { color: chartTextColor, padding: 15, font: { size: 13, weight: 700 }, usePointStyle: true, pointStyle: 'circle' },
-                        onClick: function(e, legendItem, legend) {
-                            const index = legendItem.index;
-                            const chart = legend.chart;
-                            const label = legendItem.text;
-                            chart.toggleDataVisibility(index);
-                            chart.update();
-                            if (!chart.getDataVisibility(index)) {
-                                if (!hiddenGovLabels.includes(label)) hiddenGovLabels.push(label);
-                            } else {
-                                hiddenGovLabels = hiddenGovLabels.filter(l => l !== label);
-                            }
-                            applyCrossFilter(leadsData); 
-                        }
-                    },
+                    legend: { display: false },
                     tooltip: { 
-                        backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12,
-                        callbacks: {
-                            label: tooltipPercentageCallback.label,
-                            afterBody: function(context) { return context[0].label === 'أخرى' && currentPlatform !== 'easy_orders' ? '\nالتفاصيل:\n' + othersDetails.join('\n') : ''; } 
-                        } 
+                        backgroundColor: tooltipBg, titleColor: tooltipColor, bodyColor: tooltipColor, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12, borderColor: gridColor, borderWidth: 1,
+                        callbacks: { label: tooltipBarPercentageCallback.label } 
                     }
                 } 
             }
@@ -1435,13 +1536,11 @@
 
     function applyCrossFilter(leadsData = currentFilteredLeads) {
         activeCrossFilteredData = currentFilteredData.filter(row => {
-            let cat = currentPlatform === 'easy_orders' ? (row["حالة الطلب"] || "غير محدد") : (row["المحافظة"] || "غير محدد");
-            let chartLabel = cat;
-            if (currentPlatform === 'easy_orders') {
-                chartLabel = statusTranslations[cat] ? statusTranslations[cat].text : cat;
-            } else {
-                chartLabel = govCategoryMap[cat] || "غير محدد";
-            }
+            if (currentPlatform === 'easy_orders' || currentPlatform === 'hero_messenger') return true; 
+            
+            let cat = row["المحافظة"] || "غير محدد";
+            let chartLabel = govCategoryMap[cat] || "غير محدد";
+            
             return !hiddenGovLabels.includes(chartLabel);
         });
 
@@ -1465,9 +1564,10 @@
     function updateWidgets(data, leadsData = []) {
         let isDark = document.body.classList.contains('dark-mode');
         let chartTextColor = isDark ? '#F1F5F9' : '#0F172A';
-        let gridColor = isDark ? 'rgba(241, 245, 249, 0.05)' : 'rgba(15, 23, 42, 0.05)';
-        let tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(30, 41, 59, 0.95)';
-        const distinctColors = ['#F59E0B', '#3B82F6', '#059669', '#EF4444', '#8B5CF6', '#06B6D4', '#EA580C', '#4F46E5', '#BE123C', '#1D4ED8', '#B45309', '#047857'];
+        let gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+        let tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+        let tooltipColor = isDark ? '#F1F5F9' : '#0F172A';
+        const colorfulPalette = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F43F5E', '#14B8A6', '#F97316', '#6366F1'];
 
         let totalOrders = data.length;
         let totalRevenue = 0;
@@ -1504,20 +1604,20 @@
                     <th>المحافظة</th>
                     <th>اسم المنتج</th>
                     <th>السعر</th>
-                    <th>المصدر (الحملة)</th>
+                    <th>الحملة الإعلانية</th>
                     ${showAdLink ? '<th class="ad-link-col">رابط الإعلان</th>' : ''}
+                    <th>حالة الطلب</th>
                 </tr>
             `;
         }
         document.getElementById('dynamicTableHeader').innerHTML = tableHeaderHTML;
 
         if (totalOrders === 0) {
-            let colSpan = currentPlatform === 'easy_orders' ? 8 : (showAdLink ? 8 : 7);
-            ordersTableHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات طلبات مطابقة للفلتر 🔍</td></tr>`;
+            let colSpan = currentPlatform === 'easy_orders' ? 8 : (showAdLink ? 9 : 8);
+            ordersTableHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات مطابقة للفلتر أو البحث 🔍</td></tr>`;
         } else {
             data.forEach(row => {
                 let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
-                // حساب المنتجات بشكل صريح بدون تقسيم لضمان الدقة
                 let cleanProduct = sku.toString().trim();
                 if (cleanProduct !== "-" && cleanProduct !== "") {
                     skuCounts[cleanProduct] = (skuCounts[cleanProduct] || 0) + 1;
@@ -1530,7 +1630,8 @@
                 if (currentPlatform === 'easy_orders') {
                     let phoneAlt = row["رقم بديل"] || "-";
                     let source = row["مصدر الزيارة"] || "غير محدد";
-                    let campaign = row["اسم الحملة"] || "أورجانيك";
+                    let cleanCamp = row["اسم الحملة النظيف"] || "أورجانيك";
+                    let rawCamp = row["اسم الحملة الأصلي"] || "أورجانيك";
                     
                     sourceCounts[source] = (sourceCounts[source] || 0) + 1;
 
@@ -1539,15 +1640,23 @@
                     let statusBadgeHtml = `<span class="status-badge" style="background:${trans.bgColor}; color:${trans.color}; border: 1px solid ${trans.color}40;">${trans.text}</span>`;
                     let sourceBadge = source === "أورجانيك" ? "organic-badge" : "campaign-badge";
 
+                    let campBadgeClass = cleanCamp === "أورجانيك" ? "organic-badge" : "campaign-badge";
+                    let campaignHtml = `
+                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                            <span class="${campBadgeClass}">${cleanCamp}</span>
+                            ${rawCamp !== cleanCamp && rawCamp !== "أورجانيك" ? `<span style="font-size:0.7em; color:var(--text-muted); font-family:monospace; direction:ltr;" title="الاسم الأصلي / ID">${rawCamp}</span>` : ''}
+                        </div>
+                    `;
+
                     ordersTableHTML += `
                         <tr>
                             <td style="font-size: 0.9em;">${date}</td>
                             <td style="font-weight: 700;">${name}</td>
                             <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em;">${phone}</td>
                             <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em; color:var(--text-muted);">${phoneAlt}</td>
-                            <td style="font-weight: 700; color: #3B82F6;">${sku}</td>
+                            <td style="font-weight: 700; color: var(--primary);">${sku}</td>
                             <td><span class="${sourceBadge}">${source}</span></td>
-                            <td><span class="campaign-badge">${campaign}</span></td>
+                            <td>${campaignHtml}</td>
                             <td>${statusBadgeHtml}</td>
                         </tr>
                     `;
@@ -1556,12 +1665,12 @@
                     let price = parseFloat(priceRaw) || 0;
                     totalRevenue += price;
 
-                    let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "أورجانيك";
-                    if (!campaign || campaign.toString().trim() === "") campaign = "أورجانيك";
-                    campaigns[campaign] = (campaigns[campaign] || 0) + 1;
+                    let cleanCamp = row["اسم الحملة النظيف"] || "أورجانيك";
+                    let rawCamp = row["اسم الحملة الأصلي"] || "أورجانيك";
+                    
+                    campaigns[cleanCamp] = (campaigns[cleanCamp] || 0) + 1;
                     
                     let gov = row["المحافظة"] || "غير محدد";
-                    let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
 
                     let adLinkTd = "";
                     if (showAdLink) {
@@ -1572,16 +1681,29 @@
                         adLinkTd = `<td>${linkBtnHtml}</td>`;
                     }
 
+                    let rawStatus = row["حالة الطلب"] || "created";
+                    let trans = statusTranslations[rawStatus] || { text: rawStatus, color: '#64748B', bgColor: '#F1F5F9' };
+                    let statusBadgeHtml = `<span class="status-badge" style="background:${trans.bgColor}; color:${trans.color}; border: 1px solid ${trans.color}40;">${trans.text}</span>`;
+
+                    let campBadgeClass = cleanCamp === "أورجانيك" ? "organic-badge" : "campaign-badge";
+                    let campaignHtml = `
+                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                            <span class="${campBadgeClass}">${cleanCamp}</span>
+                            ${rawCamp !== cleanCamp && rawCamp !== "أورجانيك" ? `<span style="font-size:0.75em; color:var(--text-muted); font-family:monospace; direction:ltr;" title="الاسم الأصلي / ID">${rawCamp}</span>` : ''}
+                        </div>
+                    `;
+
                     ordersTableHTML += `
                         <tr>
                             <td style="font-size: 0.9em;">${date}</td>
                             <td style="font-weight: 700;">${name}</td>
                             <td dir="ltr" style="text-align: right; letter-spacing: 1px; font-family: monospace; font-size: 1.1em;">${phone}</td>
                             <td style="font-weight: 500;">${gov}</td>
-                            <td style="font-weight: 700; color: #3B82F6;">${sku}</td>
-                            <td class="revenue-text" style="font-weight: 800;">${price} ج.م</td>
-                            <td><span class="${badgeClass}">${campaign}</span></td>
+                            <td style="font-weight: 700; color: var(--primary);">${sku}</td>
+                            <td style="font-weight: 800; color: #10B981;">${price} ج.م</td>
+                            <td>${campaignHtml}</td>
                             ${adLinkTd}
+                            <td>${statusBadgeHtml}</td>
                         </tr>
                     `;
                 }
@@ -1589,13 +1711,14 @@
         }
 
         if (totalLeads === 0) {
-            leadsTableHTML = `<tr><td colspan="${showAdLink ? 4 : 3}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
+            leadsTableHTML = `<tr><td colspan="${showAdLink ? 4 : 3}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات مطابقة 🔍</td></tr>`;
         } else {
             leadsData.forEach(row => {
                 let date = generateHtmlDate(row["_rawDate"]);
                 let senderId = row["Sender ID"] || row["رقم العميل"] || "-";
-                let campaign = row["اسم الإعلان"] || row["اسم الحملة"] || "غير محدد";
-                let badgeClass = campaign === "أورجانيك" ? "organic-badge" : "campaign-badge";
+                
+                let cleanCamp = row["اسم الحملة النظيف"] || "أورجانيك";
+                let rawCamp = row["اسم الحملة الأصلي"] || "أورجانيك";
                 
                 let adLinkTdLead = "";
                 if (showAdLink) {
@@ -1605,12 +1728,20 @@
                         : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:bold;">-</span>';
                     adLinkTdLead = `<td>${linkBtnHtml}</td>`;
                 }
+                
+                let campBadgeClass = cleanCamp === "أورجانيك" ? "organic-badge" : "campaign-badge";
+                let campaignHtml = `
+                    <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                        <span class="${campBadgeClass}">${cleanCamp}</span>
+                        ${rawCamp !== cleanCamp && rawCamp !== "أورجانيك" ? `<span style="font-size:0.75em; color:var(--text-muted); font-family:monospace; direction:ltr;">${rawCamp}</span>` : ''}
+                    </div>
+                `;
 
                 leadsTableHTML += `
                     <tr>
                         <td style="font-size: 0.9em;">${date}</td>
-                        <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em; font-weight: 700; color: #3B82F6;">${senderId}</td>
-                        <td><span class="${badgeClass}">${campaign}</span></td>
+                        <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 1.1em; font-weight: 700; color: var(--primary);">${senderId}</td>
+                        <td>${campaignHtml}</td>
                         ${adLinkTdLead}
                     </tr>
                 `;
@@ -1661,20 +1792,33 @@
         if (otherSkuCount > 0) skuClean['أخرى'] = otherSkuCount;
 
         productChartInstance = new Chart(document.getElementById('productChart'), {
-            type: 'doughnut',
+            type: 'bar',
             data: { 
                 labels: Object.keys(skuClean), 
-                datasets: [{ data: Object.values(skuClean), backgroundColor: distinctColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 }] 
+                datasets: [{ 
+                    label: 'العدد',
+                    data: Object.values(skuClean), 
+                    backgroundColor: colorfulPalette, 
+                    borderRadius: 6,
+                    barThickness: 'flex',
+                    maxBarThickness: 40,
+                    minBarLength: 15
+                }] 
             },
             options: { 
-                responsive: true, maintainAspectRatio: false, cutout: '70%',
-                animation: { animateScale: true, animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
+                responsive: true, maintainAspectRatio: false,
+                indexAxis: 'y',
+                animation: { duration: 1000, easing: 'easeOutQuart' },
+                scales: { 
+                    x: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
+                    y: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
+                },
                 plugins: { 
-                    legend: { position: 'bottom', labels: { color: chartTextColor, padding: 15, font: { size: 13, weight: 700 }, usePointStyle: true, pointStyle: 'circle' } },
+                    legend: { display: false },
                     tooltip: { 
-                        backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12,
+                        backgroundColor: tooltipBg, titleColor: tooltipColor, bodyColor: tooltipColor, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12, borderColor: gridColor, borderWidth: 1,
                         callbacks: { 
-                            label: tooltipPercentageCallback.label,
+                            label: tooltipBarPercentageCallback.label,
                             afterBody: function(context) { return context[0].label === 'أخرى' ? '\nالتفاصيل:\n' + otherSkuDetails.join('\n') : ''; } 
                         } 
                     }
@@ -1684,44 +1828,43 @@
 
         if (campaignChartInstance) campaignChartInstance.destroy();
 
-        if (currentPlatform === 'easy_orders') {
-            campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
-                type: 'doughnut',
-                data: { 
-                    labels: Object.keys(sourceCounts), 
-                    datasets: [{ data: Object.values(sourceCounts), backgroundColor: distinctColors, borderWidth: 4, borderColor: isDark ? '#1E293B' : '#FFFFFF', hoverOffset: 12 }] 
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, cutout: '70%',
-                    animation: { animateScale: true, animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { color: chartTextColor, padding: 15, font: { size: 13, weight: 700 }, usePointStyle: true, pointStyle: 'circle' } },
-                        tooltip: { 
-                            backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: true, cornerRadius: 12,
-                            callbacks: { label: tooltipPercentageCallback.label } 
-                        }
-                    } 
-                }
-            });
-        } else {
-            let ctxBar = document.getElementById('campaignChart').getContext('2d');
-            let gradientBar = ctxBar.createLinearGradient(0, 0, 0, 400);
-            gradientBar.addColorStop(0, '#059669'); 
-            gradientBar.addColorStop(1, isDark ? '#022C22' : '#D1FAE5'); 
+        let ctxBar = document.getElementById('campaignChart').getContext('2d');
+        let gradientBar = ctxBar.createLinearGradient(0, 0, 0, 400);
+        gradientBar.addColorStop(0, '#7C3AED'); 
+        gradientBar.addColorStop(1, isDark ? '#4C1D95' : '#EDE9FE'); 
 
-            campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
-                type: 'bar',
-                data: { labels: Object.keys(campaigns), datasets: [{ data: Object.values(campaigns), backgroundColor: gradientBar, borderRadius: 8, barThickness: 45 }] },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, animation: { y: { duration: 800, easing: 'easeOutQuart' } },
-                    plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12 } },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
-                        x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
-                    }
+        let campaignLabels = currentPlatform === 'easy_orders' ? Object.keys(sourceCounts) : Object.keys(campaigns);
+        let campaignData = currentPlatform === 'easy_orders' ? Object.values(sourceCounts) : Object.values(campaigns);
+
+        campaignChartInstance = new Chart(document.getElementById('campaignChart'), {
+            type: 'bar',
+            data: { 
+                labels: campaignLabels, 
+                datasets: [{ 
+                    label: 'عدد الطلبات',
+                    data: campaignData, 
+                    backgroundColor: gradientBar, 
+                    borderRadius: 8, 
+                    maxBarThickness: 50,
+                    minBarLength: 15 
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                animation: { y: { duration: 800, easing: 'easeOutQuart' } },
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { 
+                        backgroundColor: tooltipBg, titleColor: tooltipColor, bodyColor: tooltipColor, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12, borderColor: gridColor, borderWidth: 1,
+                        callbacks: { label: tooltipBarPercentageCallback.label }
+                    } 
+                },
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 } } }, 
+                    x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
                 }
-            });
-        }
+            }
+        });
     }
 
     async function syncDataBackground() {
@@ -1742,12 +1885,12 @@
                 ['easy_order_campaigns', easyOrdersResult.error]
             ].filter(([, error]) => error).map(([table, error]) => ({ ...error, table }));
 
-            rawWhatsappOrders = waOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "العنوان بالتفصيل": item.address, "كود المنتج sku": item.sku, "اسم المنتج": item.product_name, "السعر": item.price, "رقم الإعلان": item.ad_id, "اسم الإعلان": item.ad_name, "رابط الإعلان": item.ad_link }));
-            rawWhatsappLeads = waLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "رقم العميل": item.customer_number, "رقم الحملة": item.campaign_id, "اسم الحملة": item.campaign_name, "رابط الإعلان": item.ad_link }));
-            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name }));
-            rawMessengerLeads = msgLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || item.customer_number, "اسم الحملة": item.campaign_id || item.campaign || item.campaign_name }));
+            rawWhatsappOrders = waOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "العنوان بالتفصيل": item.address, "كود المنتج sku": item.sku, "اسم المنتج": item.product_name, "السعر": item.price, "رقم الإعلان": item.ad_id, "اسم الحملة النظيف": cleanCampaignName(item.ad_name), "اسم الحملة الأصلي": item.ad_name || "أورجانيك", "رابط الإعلان": item.ad_link, "حالة الطلب": item.order_status || "created" }));
+            rawWhatsappLeads = waLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "رقم العميل": item.customer_number, "رقم الحملة": item.campaign_id, "اسم الحملة النظيف": cleanCampaignName(item.campaign_name), "اسم الحملة الأصلي": item.campaign_name || "أورجانيك", "رابط الإعلان": item.ad_link }));
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name), "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
+            rawMessengerLeads = msgLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || item.customer_number, "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name), "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك" }));
             
-            rawEasyOrders = easyOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.phone, "رقم بديل": item.phone_alt || "-", "اسم المنتج": item.product_name || "-", "مصدر الزيارة": item.utm_source || "غير محدد", "اسم الحملة": item.utm_campaign || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
+            rawEasyOrders = easyOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.phone, "رقم بديل": item.phone_alt || "-", "اسم المنتج": item.product_name || "-", "مصدر الزيارة": item.utm_source || "غير محدد", "اسم الحملة النظيف": cleanCampaignName(item.utm_campaign), "اسم الحملة الأصلي": item.utm_campaign || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
 
             showSupabaseErrors(errors);
 
@@ -1756,26 +1899,22 @@
             else { allOrdersData = rawEasyOrders; allLeadsData = []; }
 
             updateLiveTicker(allOrdersData);
-            applyDateFilter();
+            applyFilters();
 
         } catch (error) { console.error("خطأ في المزامنة اللحظية:", error); }
     }
 </script>
 
-<!-- === بداية إضافة هيرو ماسنجر الذكية === -->
 <script>
-    // 1. إضافة زر القسم الجديد في القائمة الجانبية بسلاسة
     document.querySelector('.sidebar nav').insertAdjacentHTML('beforeend', `
         <button class="nav-btn" id="nav-hero_messenger" onclick="switchPlatformHero('hero_messenger')">
             🦸‍♂️ حملات هيرو ماسنجر
         </button>
     `);
 
-    // 2. تجهيز حاويات بيانات هيرو
     let rawHeroOrders = [];
     let rawHeroLeads = [];
 
-    // 3. جلب بيانات هيرو في الخلفية باستخدام دوال الاتصال القديمة
     async function fetchHeroData() {
         try {
             const [ordersRes, leadsRes] = await Promise.all([
@@ -1790,20 +1929,22 @@
                 "المحافظة": item.governorate,
                 "اسم المنتج": item.product_name,
                 "السعر": item.price,
-                "اسم الحملة": item.campaign
+                "اسم الحملة النظيف": cleanCampaignName(item.campaign),
+                "اسم الحملة الأصلي": item.campaign || "أورجانيك",
+                "حالة الطلب": item.order_status || "created"
             }));
 
             rawHeroLeads = (leadsRes.data || []).map(item => ({
                 "_rawDate": item.created_at,
                 "Sender ID": item.sender_id,
-                "اسم الحملة": item.campaign_id
+                "اسم الحملة النظيف": cleanCampaignName(item.campaign_id),
+                "اسم الحملة الأصلي": item.campaign_id || "أورجانيك"
             }));
             
-            // تحديث الشاشة فوراً لو العميل فاتح قسم هيرو وقت المزامنة
             if(currentPlatform === 'hero_messenger') {
                 allOrdersData = rawHeroOrders;
                 allLeadsData = rawHeroLeads;
-                applyDateFilter();
+                applyFilters();
                 updateLiveTickerHero(allOrdersData);
             }
         } catch (e) {
@@ -1811,11 +1952,9 @@
         }
     }
     
-    // تشغيل جلب هيرو لأول مرة وربطه بالتحديث التلقائي
     fetchHeroData();
     setInterval(fetchHeroData, 60000);
 
-    // 4. اعتراض دالة تبديل الأقسام القديمة بذكاء لتشغيل هيرو
     const originalSwitchPlatform = switchPlatform;
     switchPlatform = function(platform) {
         if (platform === 'hero_messenger') {
@@ -1828,28 +1967,22 @@
     function switchPlatformHero(platform) {
         currentPlatform = 'hero_messenger'; 
         
-        // تفعيل لون الزر الجديد
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('nav-hero_messenger').classList.add('active');
         
-        // تظبيط العناوين العلوية
-        document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--emerald); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">حملات هيرو ماسنجر</span>`;
+        document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--primary); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">حملات هيرو ماسنجر</span>`;
         
-        // إظهار الكروت المناسبة لهيرو
         document.getElementById('leads-card').style.display = 'flex';
         document.getElementById('leads-tab-btn').style.display = 'inline-block';
         document.getElementById('revenue-card').style.display = 'flex';
         document.getElementById('campaign-card').style.display = 'flex';
+        document.getElementById('gov-card').style.display = 'none'; // تم إخفاء رسم المحافظات من هنا
         
-        // تحديث نصوص الكروت
         document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات الناجحة';
-        document.getElementById('gov-chart-title').innerText = 'الانتشار الجغرافي';
         document.getElementById('campaign-chart-title').innerText = 'أداء الحملات الإعلانية';
 
-        // إخفاء عمود رابط الإعلان الخاص بالواتساب
         document.querySelectorAll('.ad-link-col').forEach(el => el.style.display = 'none');
 
-        // تمرير داتا هيرو للسيستم القديم
         allOrdersData = rawHeroOrders;
         allLeadsData = rawHeroLeads;
         
@@ -1857,14 +1990,13 @@
         updateLiveTickerHero(allOrdersData);
     }
 
-    // 5. تخصيص شريط الأخبار ليناسب هيرو ماسنجر
     function updateLiveTickerHero(data) {
         if (currentPlatform !== 'hero_messenger') return;
         if (data.length > 0) {
             let lastOrder = data[0]; 
             let name = lastOrder["اسم العميل"] || "عميل";
             let sku = lastOrder["اسم المنتج"] || "منتج";
-            let tickerText = `قام ${name} من (${lastOrder["المحافظة"] || "غير محدد"}) بطلب [${sku}] بقيمة ${lastOrder["السعر"] || 0} ج.م عبر هيرو ماسنجر منذ وقت قصير! 🦸‍♂️`;
+            let tickerText = `قام ${name} بطلب [${sku}] بقيمة ${lastOrder["السعر"] || 0} ج.م عبر هيرو ماسنجر منذ وقت قصير! 🦸‍♂️`;
             document.getElementById('tickerText').innerText = tickerText;
             document.getElementById('tickerContainer').style.display = 'flex';
         } else {
@@ -1881,12 +2013,11 @@
         }
     };
 
-    // 6. تخصيص زر تصدير Excel لتنسيق هيرو
     const originalExportToCSV = exportToCSV;
     exportToCSV = function() {
         if(currentPlatform === 'hero_messenger'){
             let temp = currentPlatform;
-            currentPlatform = 'messenger'; // خدعة مؤقتة لاستخدام تنسيق أعمدة الماسنجر في الطباعة
+            currentPlatform = 'messenger'; 
             originalExportToCSV();
             currentPlatform = temp;
         } else {
@@ -1894,7 +2025,6 @@
         }
     };
 </script>
-<!-- === نهاية إضافة هيرو ماسنجر === -->
 
 </body>
 </html>
