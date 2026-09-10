@@ -916,6 +916,7 @@
 
     function switchPlatform(platform) {
         currentPlatform = platform;
+        document.getElementById('status-card').style.display = 'flex'; 
 
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('nav-' + platform).classList.add('active');
@@ -1976,7 +1977,8 @@
         document.getElementById('leads-tab-btn').style.display = 'inline-block';
         document.getElementById('revenue-card').style.display = 'flex';
         document.getElementById('campaign-card').style.display = 'flex';
-        document.getElementById('gov-card').style.display = 'none'; // تم إخفاء رسم المحافظات من هنا
+        document.getElementById('gov-card').style.display = 'none'; 
+        document.getElementById('status-card').style.display = 'none'; // إخفاء كارت توزيع حالات الطلبات
         
         document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات الناجحة';
         document.getElementById('campaign-chart-title').innerText = 'أداء الحملات الإعلانية';
