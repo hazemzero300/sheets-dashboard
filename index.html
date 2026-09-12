@@ -338,7 +338,7 @@
             font-size: 0.95em; 
         }
 
-        input[type="date"] {
+        input[type="date"], select.search-input {
             font-family: 'Tajawal', sans-serif; 
             padding: 10px 15px;
             border: 1px solid var(--border-color); 
@@ -349,9 +349,10 @@
             font-weight: 600; 
             transition: all 0.3s; 
             color-scheme: light dark;
+            cursor: pointer;
         }
 
-        input[type="date"]:focus { 
+        input[type="date"]:focus, select.search-input:focus { 
             border-color: var(--primary); 
             box-shadow: 0 0 0 3px var(--primary-light); 
         }
@@ -415,8 +416,8 @@
         
         .cards { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-            gap: 24px; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
             margin-bottom: 30px; 
         }
 
@@ -453,6 +454,7 @@
         .card-sku { background: linear-gradient(135deg, #3B82F6, #1D4ED8); box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3); }
         .card-orders { background: linear-gradient(135deg, #8B5CF6, #6D28D9); box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); }
         .card-leads { background: linear-gradient(135deg, #F59E0B, #B45309); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3); }
+        .card-conversion { background: linear-gradient(135deg, #F43F5E, #BE123C); box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3); }
 
         .card h3 { margin: 0; font-size: 1.05em; color: rgba(255,255,255,0.9); font-weight: 700; }
         .card p { margin: 12px 0 0; font-size: 2.3em; font-weight: 800; color: #ffffff; }
@@ -473,6 +475,11 @@
             transition: box-shadow 0.3s; 
             animation: fadeUp 0.9s ease-out backwards;
             border-radius: 20px;
+        }
+
+        .full-width-chart {
+            grid-column: 1 / -1;
+            height: 380px;
         }
 
         .chart-title { 
@@ -666,6 +673,8 @@
             .sidebar nav { display: flex; gap: 10px; flex-wrap: wrap;}
             .nav-btn { text-align: center; justify-content: center; margin-bottom: 0; padding: 10px; font-size: 0.95em; flex: 1; min-width: 140px;}
             .charts-container { grid-template-columns: 1fr; }
+            .filter-row { flex-direction: column; align-items: stretch; }
+            select.search-input { width: 100%; }
         }
     </style>
 </head>
@@ -742,6 +751,18 @@
                 <button class="btn btn-primary" onclick="applyFilters()">تطبيق الفلتر</button>
                 <button class="btn btn-secondary" onclick="resetFilter()">إعادة ضبط</button>
             </div>
+
+            <div class="filter-row" style="margin-top: 15px;">
+                <select id="productFilter" class="search-input" style="flex: 1;" onchange="applyFilters()">
+                    <option value="all">📦 كل المنتجات</option>
+                </select>
+                <select id="campaignFilter" class="search-input" style="flex: 1;" onchange="applyFilters()">
+                    <option value="all">📢 كل الحملات</option>
+                </select>
+                <select id="statusFilter" class="search-input" style="flex: 1;" onchange="applyFilters()">
+                    <option value="all">📌 كل الحالات</option>
+                </select>
+            </div>
         </div>
 
         <div class="cards">
@@ -765,9 +786,23 @@
                 <h3>إجمالي العملاء المحتملين</h3>
                 <p id="total-leads">0</p>
             </div>
+            
+            <!-- كارت معدل التحويل الجديد -->
+            <div class="card card-conversion" id="conversion-card">
+                <h3>معدل التحويل (الناجح)</h3>
+                <p id="conversion-rate">0%</p>
+            </div>
         </div>
 
         <div class="charts-container">
+            <!-- الشارت الزمني الجديد (Full Width) -->
+            <div class="chart-box glass-panel full-width-chart" id="timeline-card">
+                <div class="chart-title">مؤشر الطلبات الزمني 📈</div>
+                <div class="chart-wrapper">
+                    <canvas id="timeChart"></canvas>
+                </div>
+            </div>
+
             <div class="chart-box glass-panel" id="gov-card">
                 <div class="chart-title" id="gov-chart-title">الانتشار الجغرافي</div>
                 <div class="chart-wrapper">
@@ -888,6 +923,7 @@
     let statusChartInstance = null; 
     let campaignChartInstance = null;
     let productChartInstance = null; 
+    let timeChartInstance = null; // متغير الشارت الزمني
 
     window.onload = function() {
         document.getElementById('startDate').value = '';
@@ -914,6 +950,55 @@
         if (allOrdersData.length > 0) processData(currentFilteredData, currentFilteredLeads);
     }
 
+    function populateDropdowns(ordersData, leadsData) {
+        let products = new Set();
+        let campaigns = new Set();
+        let statuses = new Set();
+
+        ordersData.forEach(row => {
+            let sku = row["اسم المنتج"] || row["كود المنتج sku"] || "-";
+            if(sku.trim() !== "" && sku !== "-") products.add(sku.trim());
+            
+            let camp = row["اسم الحملة النظيف"] || "أورجانيك";
+            campaigns.add(camp);
+            
+            let stat = row["حالة الطلب"] || "created";
+            statuses.add(stat);
+        });
+
+        leadsData.forEach(row => {
+            let camp = row["اسم الحملة النظيف"] || "أورجانيك";
+            campaigns.add(camp);
+        });
+
+        const prodSelect = document.getElementById('productFilter');
+        const campSelect = document.getElementById('campaignFilter');
+        const statSelect = document.getElementById('statusFilter');
+
+        let currProd = prodSelect.value;
+        let currCamp = campSelect.value;
+        let currStat = statSelect.value;
+
+        prodSelect.innerHTML = '<option value="all">📦 كل المنتجات</option>';
+        campSelect.innerHTML = '<option value="all">📢 كل الحملات</option>';
+        statSelect.innerHTML = '<option value="all">📌 كل الحالات</option>';
+
+        Array.from(products).sort().forEach(p => {
+            prodSelect.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+        Array.from(campaigns).sort().forEach(c => {
+            campSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        Array.from(statuses).sort().forEach(s => {
+            let trans = statusTranslations[s] ? statusTranslations[s].text : s;
+            statSelect.innerHTML += `<option value="${s}">${trans}</option>`;
+        });
+
+        if(products.has(currProd)) prodSelect.value = currProd;
+        if(campaigns.has(currCamp)) campSelect.value = currCamp;
+        if(statuses.has(currStat)) statSelect.value = currStat;
+    }
+
     function switchPlatform(platform) {
         currentPlatform = platform;
         document.getElementById('status-card').style.display = 'flex'; 
@@ -929,6 +1014,7 @@
             allLeadsData = [];
             
             document.getElementById('leads-card').style.display = 'none';
+            document.getElementById('conversion-card').style.display = 'none'; // إخفاء معدل التحويل في إيزي
             document.getElementById('leads-tab-btn').style.display = 'none';
             document.getElementById('revenue-card').style.display = 'none';
             document.getElementById('gov-card').style.display = 'none';
@@ -939,6 +1025,7 @@
             switchTab('orders');
         } else {
             document.getElementById('leads-card').style.display = 'flex';
+            document.getElementById('conversion-card').style.display = 'flex'; // إظهاره
             document.getElementById('leads-tab-btn').style.display = 'inline-block';
             document.getElementById('revenue-card').style.display = 'flex';
             document.getElementById('gov-card').style.display = 'flex'; 
@@ -961,6 +1048,7 @@
         
         document.getElementById('campaign-card').style.display = 'flex';
 
+        populateDropdowns(allOrdersData, allLeadsData); 
         resetFilter(); 
         updateLiveTicker(allOrdersData);
     }
@@ -1052,6 +1140,7 @@
 
             rawWhatsappOrders = waOrdersResult.data.map(item => ({
                 "_rawDate": item.created_at,
+                "Sender ID": item.sender_id || "-",
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
                 "المحافظة": item.governorate,
@@ -1077,6 +1166,7 @@
 
             rawMessengerOrders = msgOrdersResult.data.map(item => ({
                 "_rawDate": item.created_at,
+                "Sender ID": item.sender_id || "-",
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
                 "المحافظة": item.governorate,
@@ -1096,6 +1186,7 @@
 
             rawEasyOrders = easyOrdersResult.data.map(item => ({
                 "_rawDate": item.created_at,
+                "Sender ID": item.sender_id || "-",
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.phone,
                 "رقم بديل": item.phone_alt || "-",
@@ -1166,9 +1257,10 @@
                 });
             } else {
                 let showAdLink = currentPlatform === 'whatsapp';
-                csvContent += showAdLink ? "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب,رابط الإعلان\n" : "التاريخ,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب\n";
+                csvContent += showAdLink ? "التاريخ,ID المرسل,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب,رابط الإعلان\n" : "التاريخ,ID المرسل,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب\n";
                 exportData.forEach(row => {
                     let date = formatExportDate(row["_rawDate"]);
+                    let senderId = row["Sender ID"] || "-";
                     let name = (row["اسم العميل"] || "-").replace(/,/g, " "); 
                     let phone = row["رقم الموبايل"] || "-";
                     let gov = row["المحافظة"] || "-";
@@ -1177,7 +1269,7 @@
                     let campaign = row["اسم الحملة الأصلي"] || "أورجانيك";
                     let statusTrans = statusTranslations[row["حالة الطلب"]]?.text || row["حالة الطلب"] || "created";
                     
-                    csvContent += `${date},${name},${phone},${gov},${sku},${price},${campaign},${statusTrans}`;
+                    csvContent += `${date},${senderId},${name},${phone},${gov},${sku},${price},${campaign},${statusTrans}`;
                     if (showAdLink) {
                         let adLink = row["رابط الإعلان"] || "أورجانيك";
                         csvContent += `,${adLink}`;
@@ -1280,6 +1372,10 @@
         let startVal = document.getElementById('startDate').value;
         let endVal = document.getElementById('endDate').value;
         let query = document.getElementById('searchInput').value.toLowerCase().trim();
+        
+        let prodFilterVal = document.getElementById('productFilter').value;
+        let campFilterVal = document.getElementById('campaignFilter').value;
+        let statFilterVal = document.getElementById('statusFilter').value;
 
         if (startVal && endVal) {
             if (new Date(startVal) > new Date(endVal)) {
@@ -1305,12 +1401,22 @@
             
             let matchSearch = true;
             if (query !== "") {
+                let senderId = String(row["Sender ID"] || "").toLowerCase();
                 let name = String(row["اسم العميل"] || "").toLowerCase();
                 let phone = String(row["رقم الموبايل"] || "").toLowerCase();
                 let sku = String(row["اسم المنتج"] || row["كود المنتج sku"] || "").toLowerCase();
-                matchSearch = name.includes(query) || phone.includes(query) || sku.includes(query);
+                matchSearch = senderId.includes(query) || name.includes(query) || phone.includes(query) || sku.includes(query);
             }
-            return isValidDate && matchSearch;
+
+            let sku = String(row["اسم المنتج"] || row["كود المنتج sku"] || "").trim();
+            let camp = row["اسم الحملة النظيف"] || "أورجانيك";
+            let stat = row["حالة الطلب"] || "created";
+
+            let matchProd = (prodFilterVal === "all") || (sku === prodFilterVal);
+            let matchCamp = (campFilterVal === "all") || (camp === campFilterVal);
+            let matchStat = (statFilterVal === "all") || (stat === statFilterVal);
+
+            return isValidDate && matchSearch && matchProd && matchCamp && matchStat;
         });
 
         currentFilteredLeads = allLeadsData.filter(row => {
@@ -1328,10 +1434,17 @@
             let matchSearch = true;
             if (query !== "") {
                 let senderId = String(row["Sender ID"] || row["رقم العميل"] || "").toLowerCase();
-                let camp = String(row["اسم الحملة النظيف"] || "").toLowerCase();
-                matchSearch = senderId.includes(query) || camp.includes(query);
+                let campStr = String(row["اسم الحملة النظيف"] || "").toLowerCase();
+                matchSearch = senderId.includes(query) || campStr.includes(query);
             }
-            return isValidDate && matchSearch;
+
+            let campLead = row["اسم الحملة النظيف"] || "أورجانيك";
+            let matchCampLead = (campFilterVal === "all") || (campLead === campFilterVal);
+            
+            let matchProdLead = (prodFilterVal === "all");
+            let matchStatLead = (statFilterVal === "all");
+
+            return isValidDate && matchSearch && matchCampLead && matchProdLead && matchStatLead;
         });
 
         processData(currentFilteredData, currentFilteredLeads);
@@ -1341,6 +1454,10 @@
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
         document.getElementById('searchInput').value = '';
+        
+        document.getElementById('productFilter').value = 'all';
+        document.getElementById('campaignFilter').value = 'all';
+        document.getElementById('statusFilter').value = 'all';
         
         document.querySelectorAll('.chip').forEach(btn => {
             btn.style.background = '';
@@ -1374,6 +1491,29 @@
         }, stepTime);
     }
 
+    // دالة الأنيميشن للأرقام العشرية (معدل التحويل)
+    function animateValueFloat(id, start, end, duration) {
+        let obj = document.getElementById(id);
+        if (start === end) {
+            obj.innerText = end.toFixed(1) + '%';
+            return;
+        }
+        let range = end - start;
+        let current = start;
+        let stepTime = 20; 
+        let steps = Math.max(1, duration / stepTime);
+        let increment = range / steps;
+        
+        let timer = setInterval(function() {
+            current += increment;
+            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                current = end;
+                clearInterval(timer);
+            }
+            obj.innerText = current.toFixed(1) + '%';
+        }, stepTime);
+    }
+
     const tooltipBarPercentageCallback = {
         label: function(context) {
             let label = context.dataset.label || '';
@@ -1403,6 +1543,9 @@
         let totalOrders = data.length;
         let govCategoryCounts = {};
         let statusCategoryCounts = {};
+        
+        // متغيرات للرسم البياني الزمني
+        let dateCounts = {};
 
         data.forEach(row => {
             if (currentPlatform !== 'easy_orders') {
@@ -1412,6 +1555,15 @@
             
             let statusField = row["حالة الطلب"] || "created";
             statusCategoryCounts[statusField] = (statusCategoryCounts[statusField] || 0) + 1;
+
+            // حساب التواريخ للرسم الزمني
+            if(row._rawDate){
+                let d = new Date(row._rawDate);
+                if(!isNaN(d.getTime())){
+                    let dStr = formatHTMLDate(d);
+                    dateCounts[dStr] = (dateCounts[dStr] || 0) + 1;
+                }
+            }
         });
 
         let cleanGovCounts = {};
@@ -1435,6 +1587,7 @@
 
         if (govChartInstance) govChartInstance.destroy();
         if (statusChartInstance) statusChartInstance.destroy(); 
+        if (timeChartInstance) timeChartInstance.destroy();
 
         let isDark = document.body.classList.contains('dark-mode');
         let chartTextColor = isDark ? '#F1F5F9' : '#0F172A';
@@ -1443,6 +1596,50 @@
         let tooltipColor = isDark ? '#F1F5F9' : '#0F172A';
         const colorfulPalette = ['#EC4899', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F43F5E', '#8B5CF6', '#14B8A6', '#F97316', '#6366F1'];
         
+        // رسم المؤشر الزمني
+        let sortedDates = Object.keys(dateCounts).sort();
+        let timelineData = sortedDates.map(d => dateCounts[d]);
+        
+        let ctxTime = document.getElementById('timeChart').getContext('2d');
+        let gradientTime = ctxTime.createLinearGradient(0, 0, 0, 400);
+        gradientTime.addColorStop(0, 'rgba(124, 58, 237, 0.5)'); 
+        gradientTime.addColorStop(1, 'rgba(124, 58, 237, 0.0)'); 
+
+        timeChartInstance = new Chart(document.getElementById('timeChart'), {
+            type: 'line',
+            data: { 
+                labels: sortedDates, 
+                datasets: [{ 
+                    label: 'الطلبات',
+                    data: timelineData, 
+                    backgroundColor: gradientTime,
+                    borderColor: '#7C3AED',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#10B981',
+                    pointBorderColor: '#FFFFFF',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.4 
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                animation: { y: { duration: 1000, easing: 'easeOutQuart' } },
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { 
+                        backgroundColor: tooltipBg, titleColor: tooltipColor, bodyColor: tooltipColor, padding: 14, titleFont: { size: 14, family: 'Tajawal' }, bodyFont: { size: 14, weight: 'bold', family: 'Tajawal' }, displayColors: false, cornerRadius: 12, borderColor: gridColor, borderWidth: 1
+                    } 
+                },
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 700 }, precision: 0 } }, 
+                    x: { grid: { display: false, drawBorder: false }, ticks: { color: chartTextColor, font: { size: 13, weight: 800 } } } 
+                }
+            }
+        });
+
         if (currentPlatform !== 'easy_orders' && currentPlatform !== 'hero_messenger') {
             govChartInstance = new Chart(document.getElementById('govChart'), {
                 type: 'polarArea',
@@ -1600,6 +1797,7 @@
             tableHeaderHTML = `
                 <tr>
                     <th>التاريخ</th>
+                    <th>ID المرسل</th>
                     <th>اسم العميل</th>
                     <th>رقم الموبايل</th>
                     <th>المحافظة</th>
@@ -1614,7 +1812,7 @@
         document.getElementById('dynamicTableHeader').innerHTML = tableHeaderHTML;
 
         if (totalOrders === 0) {
-            let colSpan = currentPlatform === 'easy_orders' ? 8 : (showAdLink ? 9 : 8);
+            let colSpan = currentPlatform === 'easy_orders' ? 8 : (showAdLink ? 10 : 9);
             ordersTableHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:40px; font-weight:800; color:var(--text-muted);">لا توجد بيانات مطابقة للفلتر أو البحث 🔍</td></tr>`;
         } else {
             data.forEach(row => {
@@ -1625,6 +1823,7 @@
                 }
 
                 let date = generateHtmlDate(row["_rawDate"]);
+                let senderId = row["Sender ID"] || "-";
                 let name = row["اسم العميل"] || "-";
                 let phone = row["رقم الموبايل"] || "-";
                 
@@ -1697,6 +1896,7 @@
                     ordersTableHTML += `
                         <tr>
                             <td style="font-size: 0.9em;">${date}</td>
+                            <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.95em; font-weight: 700; color: var(--primary);">${senderId}</td>
                             <td style="font-weight: 700;">${name}</td>
                             <td dir="ltr" style="text-align: right; letter-spacing: 1px; font-family: monospace; font-size: 1.1em;">${phone}</td>
                             <td style="font-weight: 500;">${gov}</td>
@@ -1770,6 +1970,11 @@
             
             let currentLeadsValue = parseInt(document.getElementById('total-leads').innerText.replace(/,/g, '')) || 0;
             animateValue("total-leads", currentLeadsValue, totalLeads, 600); 
+            
+            // حساب معدل التحويل
+            let currentConvValue = parseFloat(document.getElementById('conversion-rate').innerText) || 0;
+            let targetConvValue = totalLeads > 0 ? (totalOrders / totalLeads) * 100 : 0;
+            animateValueFloat("conversion-rate", currentConvValue, targetConvValue, 600);
         }
 
         document.getElementById('top-sku').innerText = topSku;
@@ -1886,12 +2091,12 @@
                 ['easy_order_campaigns', easyOrdersResult.error]
             ].filter(([, error]) => error).map(([table, error]) => ({ ...error, table }));
 
-            rawWhatsappOrders = waOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "العنوان بالتفصيل": item.address, "كود المنتج sku": item.sku, "اسم المنتج": item.product_name, "السعر": item.price, "رقم الإعلان": item.ad_id, "اسم الحملة النظيف": cleanCampaignName(item.ad_name), "اسم الحملة الأصلي": item.ad_name || "أورجانيك", "رابط الإعلان": item.ad_link, "حالة الطلب": item.order_status || "created" }));
+            rawWhatsappOrders = waOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || "-", "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "العنوان بالتفصيل": item.address, "كود المنتج sku": item.sku, "اسم المنتج": item.product_name, "السعر": item.price, "رقم الإعلان": item.ad_id, "اسم الحملة النظيف": cleanCampaignName(item.ad_name), "اسم الحملة الأصلي": item.ad_name || "أورجانيك", "رابط الإعلان": item.ad_link, "حالة الطلب": item.order_status || "created" }));
             rawWhatsappLeads = waLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "رقم العميل": item.customer_number, "رقم الحملة": item.campaign_id, "اسم الحملة النظيف": cleanCampaignName(item.campaign_name), "اسم الحملة الأصلي": item.campaign_name || "أورجانيك", "رابط الإعلان": item.ad_link }));
-            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name), "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
+            rawMessengerOrders = msgOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || "-", "اسم العميل": item.customer_name, "رقم الموبايل": item.mobile, "المحافظة": item.governorate, "اسم المنتج": item.product_name, "السعر": item.price, "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name), "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
             rawMessengerLeads = msgLeadsResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || item.customer_number, "اسم الحملة النظيف": cleanCampaignName(item.campaign_id || item.campaign || item.campaign_name), "اسم الحملة الأصلي": item.campaign_id || item.campaign || item.campaign_name || "أورجانيك" }));
             
-            rawEasyOrders = easyOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "اسم العميل": item.customer_name, "رقم الموبايل": item.phone, "رقم بديل": item.phone_alt || "-", "اسم المنتج": item.product_name || "-", "مصدر الزيارة": item.utm_source || "غير محدد", "اسم الحملة النظيف": cleanCampaignName(item.utm_campaign), "اسم الحملة الأصلي": item.utm_campaign || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
+            rawEasyOrders = easyOrdersResult.data.map(item => ({ "_rawDate": item.created_at, "Sender ID": item.sender_id || "-", "اسم العميل": item.customer_name, "رقم الموبايل": item.phone, "رقم بديل": item.phone_alt || "-", "اسم المنتج": item.product_name || "-", "مصدر الزيارة": item.utm_source || "غير محدد", "اسم الحملة النظيف": cleanCampaignName(item.utm_campaign), "اسم الحملة الأصلي": item.utm_campaign || "أورجانيك", "حالة الطلب": item.order_status || "created" }));
 
             showSupabaseErrors(errors);
 
@@ -1899,6 +2104,7 @@
             else if (currentPlatform === 'whatsapp') { allOrdersData = rawWhatsappOrders; allLeadsData = rawWhatsappLeads; } 
             else { allOrdersData = rawEasyOrders; allLeadsData = []; }
 
+            populateDropdowns(allOrdersData, allLeadsData);
             updateLiveTicker(allOrdersData);
             applyFilters();
 
@@ -1925,6 +2131,7 @@
             
             rawHeroOrders = (ordersRes.data || []).map(item => ({
                 "_rawDate": item.created_at,
+                "Sender ID": item.sender_id || "-",
                 "اسم العميل": item.customer_name,
                 "رقم الموبايل": item.mobile,
                 "المحافظة": item.governorate,
@@ -1945,6 +2152,7 @@
             if(currentPlatform === 'hero_messenger') {
                 allOrdersData = rawHeroOrders;
                 allLeadsData = rawHeroLeads;
+                populateDropdowns(allOrdersData, allLeadsData);
                 applyFilters();
                 updateLiveTickerHero(allOrdersData);
             }
@@ -1974,11 +2182,12 @@
         document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--primary); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">حملات هيرو ماسنجر</span>`;
         
         document.getElementById('leads-card').style.display = 'flex';
+        document.getElementById('conversion-card').style.display = 'flex'; // إظهار معدل التحويل
         document.getElementById('leads-tab-btn').style.display = 'inline-block';
         document.getElementById('revenue-card').style.display = 'flex';
         document.getElementById('campaign-card').style.display = 'flex';
         document.getElementById('gov-card').style.display = 'none'; 
-        document.getElementById('status-card').style.display = 'none'; // إخفاء كارت توزيع حالات الطلبات
+        document.getElementById('status-card').style.display = 'none'; 
         
         document.getElementById('orders-card-title').innerText = 'إجمالي الطلبات الناجحة';
         document.getElementById('campaign-chart-title').innerText = 'أداء الحملات الإعلانية';
@@ -1988,6 +2197,7 @@
         allOrdersData = rawHeroOrders;
         allLeadsData = rawHeroLeads;
         
+        populateDropdowns(allOrdersData, allLeadsData);
         resetFilter();
         updateLiveTickerHero(allOrdersData);
     }
