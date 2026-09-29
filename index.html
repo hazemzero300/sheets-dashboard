@@ -873,7 +873,7 @@
 <script>
     Chart.defaults.font.family = 'Tajawal';
 
-    const SUPABASE_URL = 'https://kyotjarcktcdeyksjjvu.supabase.co';       
+    const SUPABASE_URL = 'https://kyotjarcktcdeyksjjvu.supabase.co';        
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_c0sSu98qpEQzK4pouqy8rA_6YiYMX5G';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     
@@ -931,7 +931,9 @@
         document.getElementById('searchInput').value = '';
         initTheme(); 
         fetchData(); 
-        setInterval(syncDataBackground, 60000);
+        setInterval(() => {
+            if (!document.hidden) syncDataBackground();
+        }, 60000);
     };
 
     function initTheme() {
@@ -1066,7 +1068,80 @@
         document.getElementById(tabId + '-tab').classList.add('active');
     }
 
+    const tableMemoryCache = {};
+
     async function loadSupabaseTable(tableName) {
+        const isLeadsTable = tableName.includes('potential_customers');
+
+        // لو الجدول اتحمل قبل كدا، نسحب السطور الجديدة أو المحدثة فقط (Delta Sync) بدل سحب الجدول كله
+        if (tableMemoryCache[tableName] && tableMemoryCache[tableName].initialized) {
+            const cache = tableMemoryCache[tableName];
+            let query = supabaseClient
+                .from(tableName)
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (cache.lastSyncTime) {
+                query = query.gt('created_at', cache.lastSyncTime);
+            } else {
+                query = query.limit(50);
+            }
+
+            const result = await query;
+            if (result.error) {
+                console.error(`Supabase sync error [${tableName}]:`, result.error);
+                return { data: cache.rows, error: result.error };
+            }
+
+            const newRows = result.data || [];
+            if (newRows.length > 0) {
+                if (newRows[0].created_at) {
+                    cache.lastSyncTime = newRows[0].created_at;
+                }
+
+                newRows.slice().reverse().forEach(newRow => {
+                    const rowId = newRow.id;
+                    const senderKey = newRow.sender_id || newRow.customer_number;
+
+                    // لو عميل قديم دخل من حملة إعلانية، نحدث سجلاته الأورجانيك القديمة في الذاكرة
+                    if (isLeadsTable && senderKey) {
+                        const newCamp = newRow.campaign_id || newRow.campaign || newRow.campaign_name;
+                        if (newCamp && newCamp !== 'أورجانيك') {
+                            cache.rows.forEach(oldRow => {
+                                const oldSender = oldRow.sender_id || oldRow.customer_number;
+                                if (oldSender === senderKey) {
+                                    if (oldRow.campaign_id === 'أورجانيك') oldRow.campaign_id = newCamp;
+                                    if (oldRow.campaign === 'أورجانيك') oldRow.campaign = newCamp;
+                                    if (oldRow.campaign_name === 'أورجانيك') oldRow.campaign_name = newCamp;
+                                }
+                            });
+                        }
+                    }
+
+                    // منع تكرار نفس السطر لو كان تحديث لعميل خلال 12 ساعة أو بنفس الـ id
+                    let existingIdx = -1;
+                    if (rowId !== undefined && rowId !== null) {
+                        existingIdx = cache.rows.findIndex(r => r.id === rowId);
+                    } else if (isLeadsTable && senderKey && newRow.created_at) {
+                        const newTime = new Date(newRow.created_at).getTime();
+                        existingIdx = cache.rows.findIndex(r => {
+                            const rSender = r.sender_id || r.customer_number;
+                            const rTime = r.created_at ? new Date(r.created_at).getTime() : 0;
+                            return rSender === senderKey && Math.abs(newTime - rTime) <= 12 * 60 * 60 * 1000;
+                        });
+                    }
+
+                    if (existingIdx !== -1) {
+                        cache.rows.splice(existingIdx, 1);
+                    }
+                    cache.rows.unshift(newRow);
+                });
+            }
+
+            return { data: cache.rows, error: null };
+        }
+
+        // التحميل الأول فقط عند فتح الصفحة
         let allData = [];
         let from = 0;
         const step = 1000;
@@ -1089,6 +1164,13 @@
             if (dataChunk.length < step) break;
             from += step;
         }
+
+        tableMemoryCache[tableName] = {
+            initialized: true,
+            rows: allData,
+            lastSyncTime: (allData.length > 0 && allData[0].created_at) ? allData[0].created_at : null
+        };
+
         return { data: allData, error: null };
     }
 
@@ -2102,11 +2184,13 @@
 
             if (currentPlatform === 'messenger') { allOrdersData = rawMessengerOrders; allLeadsData = rawMessengerLeads; } 
             else if (currentPlatform === 'whatsapp') { allOrdersData = rawWhatsappOrders; allLeadsData = rawWhatsappLeads; } 
-            else { allOrdersData = rawEasyOrders; allLeadsData = []; }
+            else if (currentPlatform === 'easy_orders') { allOrdersData = rawEasyOrders; allLeadsData = []; }
 
-            populateDropdowns(allOrdersData, allLeadsData);
-            updateLiveTicker(allOrdersData);
-            applyFilters();
+            if (currentPlatform !== 'hero_messenger') {
+                populateDropdowns(allOrdersData, allLeadsData);
+                updateLiveTicker(allOrdersData);
+                applyFilters();
+            }
 
         } catch (error) { console.error("خطأ في المزامنة اللحظية:", error); }
     }
@@ -2162,7 +2246,16 @@
     }
     
     fetchHeroData();
-    setInterval(fetchHeroData, 60000);
+    setInterval(() => {
+        if (!document.hidden) fetchHeroData();
+    }, 60000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            syncDataBackground();
+            fetchHeroData();
+        }
+    });
 
     const originalSwitchPlatform = switchPlatform;
     switchPlatform = function(platform) {
