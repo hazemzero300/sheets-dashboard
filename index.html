@@ -876,6 +876,19 @@
     const SUPABASE_URL = 'https://kyotjarcktcdeyksjjvu.supabase.co';        
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_c0sSu98qpEQzK4pouqy8rA_6YiYMX5G';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+    // ==========================================
+    // حماية الباقة: تحديد الأعمدة المطلوبة فقط لتقليل الـ Egress بناءً على تصميم جداولك
+    // ==========================================
+    const TABLE_COLUMNS = {
+        'whatsapp_successful_orders': 'id, created_at, customer_name, mobile, governorate, address, sku, product_name, price, ad_id, ad_name, ad_link, order_status',
+        'whatsapp_potential_customers': 'created_at, customer_number, campaign_id, campaign_name, ad_link',
+        'successful_orders_massengar': 'id, created_at, sender_id, customer_name, mobile, governorate, product_name, price, campaign, order_status',
+        'potential_customers': 'id, created_at, sender_id, campaign_id',
+        'easy_order_campaigns': 'id, created_at, customer_name, phone, phone_alt, product_name, utm_source, utm_campaign, order_status',
+        'hero_successful_orders_messenger': 'id, created_at, sender_id, customer_name, mobile, governorate, product_name, price, campaign, order_status',
+        'hero_potential_customers': 'id, created_at, sender_id, campaign_id'
+    };
     
     function cleanCampaignName(rawName) {
         if (!rawName || String(rawName).trim() === "") return "أورجانيك";
@@ -923,7 +936,7 @@
     let statusChartInstance = null; 
     let campaignChartInstance = null;
     let productChartInstance = null; 
-    let timeChartInstance = null; // متغير الشارت الزمني
+    let timeChartInstance = null; 
 
     window.onload = function() {
         document.getElementById('startDate').value = '';
@@ -931,9 +944,10 @@
         document.getElementById('searchInput').value = '';
         initTheme(); 
         fetchData(); 
+        // حماية الباقة: تم تغيير التحديث ليكون كل 3 دقائق بدل دقيقة لتقليل الطلبات
         setInterval(() => {
             if (!document.hidden) syncDataBackground();
-        }, 60000);
+        }, 180000); 
     };
 
     function initTheme() {
@@ -1016,7 +1030,7 @@
             allLeadsData = [];
             
             document.getElementById('leads-card').style.display = 'none';
-            document.getElementById('conversion-card').style.display = 'none'; // إخفاء معدل التحويل في إيزي
+            document.getElementById('conversion-card').style.display = 'none';
             document.getElementById('leads-tab-btn').style.display = 'none';
             document.getElementById('revenue-card').style.display = 'none';
             document.getElementById('gov-card').style.display = 'none';
@@ -1027,7 +1041,7 @@
             switchTab('orders');
         } else {
             document.getElementById('leads-card').style.display = 'flex';
-            document.getElementById('conversion-card').style.display = 'flex'; // إظهاره
+            document.getElementById('conversion-card').style.display = 'flex';
             document.getElementById('leads-tab-btn').style.display = 'inline-block';
             document.getElementById('revenue-card').style.display = 'flex';
             document.getElementById('gov-card').style.display = 'flex'; 
@@ -1072,13 +1086,14 @@
 
     async function loadSupabaseTable(tableName) {
         const isLeadsTable = tableName.includes('potential_customers');
+        // استخدام الأعمدة المحددة فقط من القاموس
+        const columnsToSelect = TABLE_COLUMNS[tableName] || '*';
 
-        // لو الجدول اتحمل قبل كدا، نسحب السطور الجديدة أو المحدثة فقط (Delta Sync) بدل سحب الجدول كله
         if (tableMemoryCache[tableName] && tableMemoryCache[tableName].initialized) {
             const cache = tableMemoryCache[tableName];
             let query = supabaseClient
                 .from(tableName)
-                .select('*')
+                .select(columnsToSelect) 
                 .order('created_at', { ascending: false });
 
             if (cache.lastSyncTime) {
@@ -1103,7 +1118,6 @@
                     const rowId = newRow.id;
                     const senderKey = newRow.sender_id || newRow.customer_number;
 
-                    // لو عميل قديم دخل من حملة إعلانية، نحدث سجلاته الأورجانيك القديمة في الذاكرة
                     if (isLeadsTable && senderKey) {
                         const newCamp = newRow.campaign_id || newRow.campaign || newRow.campaign_name;
                         if (newCamp && newCamp !== 'أورجانيك') {
@@ -1118,7 +1132,6 @@
                         }
                     }
 
-                    // منع تكرار نفس السطر لو كان تحديث لعميل خلال 12 ساعة أو بنفس الـ id
                     let existingIdx = -1;
                     if (rowId !== undefined && rowId !== null) {
                         existingIdx = cache.rows.findIndex(r => r.id === rowId);
@@ -1141,15 +1154,16 @@
             return { data: cache.rows, error: null };
         }
 
-        // التحميل الأول فقط عند فتح الصفحة
         let allData = [];
         let from = 0;
         const step = 1000;
+        let safetyCap = 0; // حماية الباقة: سقف أمان يمنع السحب اللانهائي
 
-        while (true) {
+        while (safetyCap < 150) { // بحد أقصى 150 ألف سجل للجدول الواحد
+            safetyCap++;
             const result = await supabaseClient
                 .from(tableName)
-                .select('*')
+                .select(columnsToSelect) 
                 .order('created_at', { ascending: false })
                 .range(from, from + step - 1);
 
@@ -1192,7 +1206,7 @@
         }))];
 
         box.innerHTML = `
-            <div style="font-weight:800;margin-bottom:8px;">⚠️ يوجد خطأ في قراءة بعض بيانات Supabase</div>
+            <div style="font-weight:800;margin-bottom:8px;">⚠️️ يوجد خطأ في قراءة بعض بيانات Supabase</div>
             <div style="font-size:13px;line-height:1.8;">
                 ${uniqueMessages.map(msg => `<div>• ${msg}</div>`).join('')}
             </div>
@@ -1573,7 +1587,6 @@
         }, stepTime);
     }
 
-    // دالة الأنيميشن للأرقام العشرية (معدل التحويل)
     function animateValueFloat(id, start, end, duration) {
         let obj = document.getElementById(id);
         if (start === end) {
@@ -1626,7 +1639,6 @@
         let govCategoryCounts = {};
         let statusCategoryCounts = {};
         
-        // متغيرات للرسم البياني الزمني
         let dateCounts = {};
 
         data.forEach(row => {
@@ -1638,7 +1650,6 @@
             let statusField = row["حالة الطلب"] || "created";
             statusCategoryCounts[statusField] = (statusCategoryCounts[statusField] || 0) + 1;
 
-            // حساب التواريخ للرسم الزمني
             if(row._rawDate){
                 let d = new Date(row._rawDate);
                 if(!isNaN(d.getTime())){
@@ -1678,7 +1689,6 @@
         let tooltipColor = isDark ? '#F1F5F9' : '#0F172A';
         const colorfulPalette = ['#EC4899', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F43F5E', '#8B5CF6', '#14B8A6', '#F97316', '#6366F1'];
         
-        // رسم المؤشر الزمني
         let sortedDates = Object.keys(dateCounts).sort();
         let timelineData = sortedDates.map(d => dateCounts[d]);
         
@@ -2053,7 +2063,6 @@
             let currentLeadsValue = parseInt(document.getElementById('total-leads').innerText.replace(/,/g, '')) || 0;
             animateValue("total-leads", currentLeadsValue, totalLeads, 600); 
             
-            // حساب معدل التحويل
             let currentConvValue = parseFloat(document.getElementById('conversion-rate').innerText) || 0;
             let targetConvValue = totalLeads > 0 ? (totalOrders / totalLeads) * 100 : 0;
             animateValueFloat("conversion-rate", currentConvValue, targetConvValue, 600);
@@ -2246,9 +2255,10 @@
     }
     
     fetchHeroData();
+    // حماية الباقة: تم تغيير تحديث هيرو ليكون كل 3 دقائق
     setInterval(() => {
         if (!document.hidden) fetchHeroData();
-    }, 60000);
+    }, 180000); 
 
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -2275,7 +2285,7 @@
         document.getElementById('dashboard-title').innerHTML = `نظرة عامة <span style="color: var(--primary); font-weight: 400;">|</span> <span style="font-size: 0.6em; color: var(--text-muted);">حملات هيرو ماسنجر</span>`;
         
         document.getElementById('leads-card').style.display = 'flex';
-        document.getElementById('conversion-card').style.display = 'flex'; // إظهار معدل التحويل
+        document.getElementById('conversion-card').style.display = 'flex'; 
         document.getElementById('leads-tab-btn').style.display = 'inline-block';
         document.getElementById('revenue-card').style.display = 'flex';
         document.getElementById('campaign-card').style.display = 'flex';
