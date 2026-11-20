@@ -654,9 +654,6 @@
             <button class="nav-btn" id="nav-hero_messenger" onclick="switchPlatform('hero_messenger')">
                 💬 ماسنجر هيرو
             </button>
-            <button class="nav-btn" id="nav-hero_whatsapp" onclick="switchPlatform('hero_whatsapp')">
-                📱 واتساب هيرو
-            </button>
         </nav>
     </aside>
 
@@ -834,20 +831,16 @@
     // 1. هندسة توفير الـ Egress: تحديد الأعمدة الضرورية فقط لكل جدول
     // ==========================================
     const TABLE_COLUMNS = {
-        'successful_orders_massengar': 'id, created_at, sender_id, customer_name, mobile, governorate, product_name, price, campaign, order_status, wesell_order_number',
-        'potential_customers': 'id, created_at, sender_id, campaign_id',
+        'successful_orders_massengar_khaled_store': 'id, created_at, sender_id, customer_name, mobile, governorate, product_name, price, campaign, order_status, wesell_order_number',
+        'potential_customers_khaled_store': 'id, created_at, sender_id, campaign_id',
         
-        'whatsapp_successful_orders': 'id, created_at, customer_name, mobile, governorate, sku, product_name, price, ad_name, ad_link, order_status',
-        'whatsapp_potential_customers': 'created_at, customer_number, campaign_id, campaign_name, ad_link',
+        'whatsapp_successful_orders_khaled_store': 'id, created_at, customer_name, mobile, governorate, sku, product_name, price, ad_name, ad_link, order_status',
+        'whatsapp_potential_customers_khaled_store': 'created_at, customer_number, campaign_id, campaign_name, ad_link',
         
         'easy_order_campaigns': 'id, created_at, customer_name, phone, phone_alt, product_name, utm_source, utm_campaign, order_status',
         
         'hero_successful_orders_messenger': 'id, created_at, sender_id, customer_name, mobile, governorate, product_name, price, campaign, order_status',
-        'hero_potential_customers': 'id, created_at, sender_id, campaign_id',
-
-        // جداول هيرو واتساب الجديدة
-        'whatsapp_successful_orders_hero': 'id, created_at, remote_jid, customer_name, mobile, governorate, sku, product_name, price, ad_name, ad_link, wesell_order_number, order_status',
-        'whatsapp_potential_customers_hero': 'created_at, customer_number, campaign_id, campaign_name, ad_link'
+        'hero_potential_customers': 'id, created_at, sender_id, campaign_id'
     };
 
     // ==========================================
@@ -856,14 +849,14 @@
     const PLATFORMS_CONFIG = {
         'messenger': {
             title: 'Khaled Store | مبيعات الماسنجر',
-            ordersTable: 'successful_orders_massengar',
-            leadsTable: 'potential_customers',
+            ordersTable: 'successful_orders_massengar_khaled_store',
+            leadsTable: 'potential_customers_khaled_store',
             hasLeads: true, hasRevenue: true, hasGov: true, hasAdLink: false, isEasyOrders: false
         },
         'whatsapp': {
             title: 'Khaled Store | مبيعات الواتساب',
-            ordersTable: 'whatsapp_successful_orders',
-            leadsTable: 'whatsapp_potential_customers',
+            ordersTable: 'whatsapp_successful_orders_khaled_store',
+            leadsTable: 'whatsapp_potential_customers_khaled_store',
             hasLeads: true, hasRevenue: true, hasGov: true, hasAdLink: true, isEasyOrders: false
         },
         'easy_orders': {
@@ -877,12 +870,6 @@
             ordersTable: 'hero_successful_orders_messenger',
             leadsTable: 'hero_potential_customers',
             hasLeads: true, hasRevenue: true, hasGov: true, hasAdLink: false, isEasyOrders: false
-        },
-        'hero_whatsapp': {
-            title: 'Hero Store 🦸‍♂️ | مبيعات الواتساب',
-            ordersTable: 'whatsapp_successful_orders_hero',
-            leadsTable: 'whatsapp_potential_customers_hero',
-            hasLeads: true, hasRevenue: true, hasGov: true, hasAdLink: true, isEasyOrders: false
         }
     };
 
