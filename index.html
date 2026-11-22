@@ -524,6 +524,14 @@
 
         tr:hover td { background-color: var(--table-hover); }
 
+        .sub-meta {
+            display: block;
+            margin-top: 3px;
+            font-size: 0.78em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
         .campaign-badge { 
             background-color: var(--primary-light); 
             color: var(--primary); 
@@ -839,8 +847,8 @@
         
         'easy_order_campaigns': 'id, created_at, customer_name, phone, phone_alt, product_name, utm_source, utm_campaign, order_status',
         
-        'hero_successful_orders_messenger': 'id, created_at, sender_id, customer_name, mobile, governorate, product_name, price, campaign, order_status',
-        'hero_potential_customers': 'id, created_at, sender_id, campaign_id'
+        'successful_orders_brand_hero': 'id, created_at, sender_id, order_number, customer_name, mobile, mobile2, governorate, address, items, product_price, shipping_price, total_price, source_type, ad_id, ad_title, order_status',
+        'leads_hero': 'sender_id, source_type, ad_id, ad_title, bot_status, created_at, updated_at'
     };
 
     // ==========================================
@@ -867,8 +875,8 @@
         },
         'hero_messenger': {
             title: 'Hero Store 🦸‍♂️ | مبيعات الماسنجر',
-            ordersTable: 'hero_successful_orders_messenger',
-            leadsTable: 'hero_potential_customers',
+            ordersTable: 'successful_orders_brand_hero',
+            leadsTable: 'leads_hero',
             hasLeads: true, hasRevenue: true, hasGov: true, hasAdLink: false, isEasyOrders: false
         }
     };
@@ -888,6 +896,44 @@
         'duplicate': { text: 'مكرر', color: '#991B1B', bgColor: '#FEF2F2' },
         'returned': { text: 'مرتجع', color: '#BE123C', bgColor: '#FFE4E6' }
     };
+
+    // عرض حالة الطلب: إبقاء النص بالإنجليزي في ماسنجر هيرو مع الحفاظ على ألوان الحالات
+    function getStatusDisplay(rawStatus, platformKey) {
+        const cleanStatus = (rawStatus === null || rawStatus === undefined || String(rawStatus).trim() === '')
+            ? '-'
+            : String(rawStatus).trim();
+        const trans = statusTranslations[cleanStatus];
+
+        if (platformKey === 'hero_messenger') {
+            return {
+                text: cleanStatus,
+                color: trans ? trans.color : '#64748B',
+                bgColor: trans ? trans.bgColor : '#F1F5F9'
+            };
+        }
+        return trans || { text: cleanStatus, color: '#64748B', bgColor: '#F1F5F9' };
+    }
+
+    // قراءة آمنة للتاريخ سواء كان ISO أو نص مثل "2026-11-21 06:36 PM"
+    function parseSafeDate(rawDate) {
+        if (!rawDate) return null;
+        const str = String(rawDate).trim();
+        const m = str.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+        if (m) {
+            let year = parseInt(m[1], 10);
+            let month = parseInt(m[2], 10) - 1;
+            let day = parseInt(m[3], 10);
+            let hour = parseInt(m[4], 10);
+            let min = parseInt(m[5], 10);
+            let sec = m[6] ? parseInt(m[6], 10) : 0;
+            const ampm = m[7].toUpperCase();
+            if (ampm === 'PM' && hour < 12) hour += 12;
+            if (ampm === 'AM' && hour === 12) hour = 0;
+            return new Date(year, month, day, hour, min, sec);
+        }
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+    }
 
     // الذاكرة المؤقتة (Cache) لكل منصة لمنع إعادة السحب
     const tableMemoryCache = {};
@@ -944,8 +990,9 @@
     }
 
     function cleanCampaignName(rawName) {
-        if (!rawName || String(rawName).trim() === "") return "أورجانيك";
-        let str = String(rawName);
+        if (!rawName) return "أورجانيك";
+        let str = String(rawName).trim();
+        if (str === "" || str.toUpperCase() === "EMPTY" || str.toLowerCase() === "organic") return "أورجانيك";
         let cleaned = str.replace(/\d{10,}/g, '');
         cleaned = cleaned.replace(/^[-_:\s]+|[-_:\s]+$/g, ''); 
         cleaned = cleaned.replace(/[-_]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
@@ -955,7 +1002,9 @@
     // استخراج Campaign ID من اسم الحملة أو من campaign_id نفسه
     function extractCampaignId(rawValue) {
         if (rawValue === null || rawValue === undefined) return "";
-        const match = String(rawValue).match(/\d{10,}/);
+        const str = String(rawValue).trim();
+        if (str === "" || str.toUpperCase() === "EMPTY") return "";
+        const match = str.match(/\d{10,}/);
         return match ? match[0] : "";
     }
 
@@ -969,7 +1018,9 @@
     // ==========================================
     async function loadSupabaseTable(tableName) {
         if (!tableName) return { data: [], error: null };
-        const isLeadsTable = tableName.includes('potential_customers');
+        const isLeadsTable = tableName.includes('potential_customers') || tableName === 'leads_hero';
+        const useIdOrdering = (tableName === 'successful_orders_brand_hero');
+        const orderCol = useIdOrdering ? 'id' : 'created_at';
         const columnsToSelect = TABLE_COLUMNS[tableName] || '*';
 
         // إذا كان الجدول محملاً مسبقاً، نسحب فقط الصفوف الجديدة (Delta Sync)
@@ -978,9 +1029,11 @@
             let query = supabaseClient
                 .from(tableName)
                 .select(columnsToSelect) 
-                .order('created_at', { ascending: false });
+                .order(orderCol, { ascending: false });
 
-            if (cache.lastSyncTime) {
+            if (useIdOrdering && cache.lastSyncId !== null && cache.lastSyncId !== undefined) {
+                query = query.gt('id', cache.lastSyncId);
+            } else if (!useIdOrdering && cache.lastSyncTime) {
                 query = query.gt('created_at', cache.lastSyncTime);
             } else {
                 query = query.limit(50);
@@ -991,15 +1044,20 @@
 
             const newRows = result.data || [];
             if (newRows.length > 0) {
+                if (useIdOrdering && newRows[0].id !== undefined) cache.lastSyncId = newRows[0].id;
                 if (newRows[0].created_at) cache.lastSyncTime = newRows[0].created_at;
 
                 newRows.slice().reverse().forEach(newRow => {
-                    const rowId = newRow.id || newRow.wesell_order_number;
+                    const rowId = newRow.id || newRow.wesell_order_number || newRow.order_number;
                     const senderKey = newRow.sender_id || newRow.customer_number || newRow.remote_jid;
 
                     let existingIdx = -1;
                     if (rowId !== undefined && rowId !== null) {
-                        existingIdx = cache.rows.findIndex(r => (r.id && r.id === rowId) || (r.wesell_order_number && r.wesell_order_number === rowId));
+                        existingIdx = cache.rows.findIndex(r =>
+                            (r.id && r.id === rowId) ||
+                            (r.wesell_order_number && r.wesell_order_number === rowId) ||
+                            (r.order_number && r.order_number === rowId)
+                        );
                     } else if (isLeadsTable && senderKey) {
                         existingIdx = cache.rows.findIndex(r => (r.sender_id || r.customer_number) === senderKey);
                     }
@@ -1022,7 +1080,7 @@
             const result = await supabaseClient
                 .from(tableName)
                 .select(columnsToSelect) 
-                .order('created_at', { ascending: false })
+                .order(orderCol, { ascending: false })
                 .range(from, from + step - 1);
 
             if (result.error) return { data: allData, error: result.error };
@@ -1037,6 +1095,7 @@
         tableMemoryCache[tableName] = {
             initialized: true,
             rows: allData,
+            lastSyncId: (allData.length > 0 && allData[0].id !== undefined) ? allData[0].id : null,
             lastSyncTime: (allData.length > 0 && allData[0].created_at) ? allData[0].created_at : null
         };
 
@@ -1061,6 +1120,41 @@
                     "حالة الطلب": item.order_status || "created"
                 };
             }
+
+            if (platformKey === 'hero_messenger') {
+                const isOrganic = !item.source_type || String(item.source_type).toLowerCase() === 'organic';
+                const rawTitle = (item.ad_title && String(item.ad_title).trim().toUpperCase() !== 'EMPTY')
+                    ? String(item.ad_title).trim()
+                    : "";
+                const rawAdId = (item.ad_id && String(item.ad_id).trim().toUpperCase() !== 'EMPTY')
+                    ? String(item.ad_id).trim()
+                    : "";
+                const rawCamp = rawTitle || (isOrganic ? "أورجانيك" : (rawAdId || "حملة إعلانية"));
+                const cleanCamp = rawTitle ? cleanCampaignName(rawTitle) : (isOrganic ? "أورجانيك" : "حملة إعلانية");
+                const campaignId = extractCampaignId(rawAdId) || rawAdId;
+
+                return {
+                    "_rawDate": item.created_at,
+                    "Sender ID": item.sender_id || "-",
+                    "رقم الأوردر": item.order_number || item.id || "-",
+                    "اسم العميل": item.customer_name || "-",
+                    "رقم الموبايل": item.mobile || "-",
+                    "رقم بديل": item.mobile2 || "",
+                    "المحافظة": item.governorate || "غير محدد",
+                    "العنوان": item.address || "",
+                    "كود المنتج sku": "-",
+                    "اسم المنتج": item.items || "-",
+                    "سعر المنتج": item.product_price || 0,
+                    "سعر الشحن": item.shipping_price || 0,
+                    "السعر": item.total_price ?? item.product_price ?? 0,
+                    "اسم الحملة النظيف": cleanCamp,
+                    "اسم الحملة الأصلي": rawCamp,
+                    "معرف الحملة": campaignId,
+                    "رابط الإعلان": "أورجانيك",
+                    "حالة الطلب": (item.order_status && String(item.order_status).trim() !== "") ? String(item.order_status).trim() : "-"
+                };
+            }
+
             let rawCamp = item.ad_name || item.campaign || item.campaign_id || "أورجانيك";
             let campaignId = extractCampaignId(item.campaign_id) || extractCampaignId(rawCamp);
             return {
@@ -1082,8 +1176,31 @@
         });
     }
 
-    function normalizeLeads(rawRows) {
+    function normalizeLeads(rawRows, platformKey) {
         return rawRows.map(item => {
+            if (platformKey === 'hero_messenger') {
+                const isOrganic = !item.source_type || String(item.source_type).toLowerCase() === 'organic';
+                const rawTitle = (item.ad_title && String(item.ad_title).trim().toUpperCase() !== 'EMPTY')
+                    ? String(item.ad_title).trim()
+                    : "";
+                const rawAdId = (item.ad_id && String(item.ad_id).trim().toUpperCase() !== 'EMPTY')
+                    ? String(item.ad_id).trim()
+                    : "";
+                const rawCamp = rawTitle || (isOrganic ? "أورجانيك" : (rawAdId || "حملة إعلانية"));
+                const cleanCamp = rawTitle ? cleanCampaignName(rawTitle) : (isOrganic ? "أورجانيك" : "حملة إعلانية");
+                const campaignId = extractCampaignId(rawAdId) || rawAdId;
+
+                return {
+                    "_rawDate": item.created_at,
+                    "Sender ID": item.sender_id || "-",
+                    "اسم الحملة النظيف": cleanCamp,
+                    "اسم الحملة الأصلي": rawCamp,
+                    "معرف الحملة": campaignId,
+                    "حالة البوت": (item.bot_status && String(item.bot_status).trim() !== "") ? String(item.bot_status).trim() : "-",
+                    "رابط الإعلان": "أورجانيك"
+                };
+            }
+
             let rawCamp = item.campaign_name || item.campaign_id || item.campaign || "أورجانيك";
             let campaignId = extractCampaignId(item.campaign_id) || extractCampaignId(rawCamp);
             return {
@@ -1130,7 +1247,7 @@
 
                 platformProcessedCache[platformKey] = {
                     orders: normalizeOrders(ordersRes.data || [], platformKey),
-                    leads: leadsRes ? normalizeLeads(leadsRes.data || []) : []
+                    leads: leadsRes ? normalizeLeads(leadsRes.data || [], platformKey) : []
                 };
             } catch (err) {
                 console.error("Platform Load Error:", err);
@@ -1229,7 +1346,7 @@
             let sku = row["اسم المنتج"] || "-";
             if (sku.trim() !== "" && sku !== "-") products.add(sku.trim());
             campaigns.add(row["اسم الحملة النظيف"] || "أورجانيك");
-            statuses.add(row["حالة الطلب"] || "created");
+            statuses.add(row["حالة الطلب"] || "-");
         });
 
         leadsData.forEach(row => {
@@ -1247,8 +1364,8 @@
         Array.from(products).sort().forEach(p => prodSelect.innerHTML += `<option value="${p}">${p}</option>`);
         Array.from(campaigns).sort().forEach(c => campSelect.innerHTML += `<option value="${c}">${c}</option>`);
         Array.from(statuses).sort().forEach(s => {
-            let trans = statusTranslations[s] ? statusTranslations[s].text : s;
-            statSelect.innerHTML += `<option value="${s}">${trans}</option>`;
+            let label = getStatusDisplay(s, currentPlatform).text;
+            statSelect.innerHTML += `<option value="${s}">${label}</option>`;
         });
     }
 
@@ -1311,7 +1428,8 @@
 
         currentFilteredData = allOrdersData.filter(row => {
             if (sDate || eDate) {
-                let rowDate = new Date(row._rawDate);
+                let rowDate = parseSafeDate(row._rawDate);
+                if (!rowDate) return false;
                 if (sDate && rowDate < sDate) return false;
                 if (eDate && rowDate > eDate) return false;
             }
@@ -1320,26 +1438,30 @@
                 let orderNum = String(row["رقم الأوردر"] || "").toLowerCase();
                 let name = String(row["اسم العميل"] || "").toLowerCase();
                 let phone = String(row["رقم الموبايل"] || "").toLowerCase();
+                let phone2 = String(row["رقم بديل"] || "").toLowerCase();
+                let address = String(row["العنوان"] || "").toLowerCase();
                 let sku = String(row["اسم المنتج"] || "").toLowerCase();
-                if (!senderId.includes(query) && !orderNum.includes(query) && !name.includes(query) && !phone.includes(query) && !sku.includes(query)) return false;
+                if (!senderId.includes(query) && !orderNum.includes(query) && !name.includes(query) && !phone.includes(query) && !phone2.includes(query) && !address.includes(query) && !sku.includes(query)) return false;
             }
             if (prodFilterVal !== "all" && String(row["اسم المنتج"] || "").trim() !== prodFilterVal) return false;
             if (campFilterVal !== "all" && (row["اسم الحملة النظيف"] || "أورجانيك") !== campFilterVal) return false;
-            if (statFilterVal !== "all" && (row["حالة الطلب"] || "created") !== statFilterVal) return false;
+            if (statFilterVal !== "all" && (row["حالة الطلب"] || "-") !== statFilterVal) return false;
 
             return true;
         });
 
         currentFilteredLeads = allLeadsData.filter(row => {
             if (sDate || eDate) {
-                let rowDate = new Date(row._rawDate);
+                let rowDate = parseSafeDate(row._rawDate);
+                if (!rowDate) return false;
                 if (sDate && rowDate < sDate) return false;
                 if (eDate && rowDate > eDate) return false;
             }
             if (query !== "") {
                 let senderId = String(row["Sender ID"] || "").toLowerCase();
                 let campStr = String(row["اسم الحملة النظيف"] || "").toLowerCase();
-                if (!senderId.includes(query) && !campStr.includes(query)) return false;
+                let campId = String(row["معرف الحملة"] || "").toLowerCase();
+                if (!senderId.includes(query) && !campStr.includes(query) && !campId.includes(query)) return false;
             }
             if (campFilterVal !== "all" && (row["اسم الحملة النظيف"] || "أورجانيك") !== campFilterVal) return false;
             if (prodFilterVal !== "all" || statFilterVal !== "all") return false;
@@ -1368,12 +1490,12 @@
                 let govField = row["المحافظة"] || "غير محدد";
                 govCategoryCounts[govField] = (govCategoryCounts[govField] || 0) + 1;
             }
-            let statusField = row["حالة الطلب"] || "created";
+            let statusField = row["حالة الطلب"] || "-";
             statusCategoryCounts[statusField] = (statusCategoryCounts[statusField] || 0) + 1;
 
             if (row._rawDate) {
-                let d = new Date(row._rawDate);
-                if (!isNaN(d.getTime())) {
+                let d = parseSafeDate(row._rawDate);
+                if (d) {
                     let dStr = formatHTMLDate(d);
                     dateCounts[dStr] = (dateCounts[dStr] || 0) + 1;
                 }
@@ -1484,10 +1606,10 @@
         // 3. شارت الحالات
         let statusLabels = [], statusData = [], statusColors = [];
         for (const [status, count] of Object.entries(statusCategoryCounts)) {
-            let trans = statusTranslations[status];
-            statusLabels.push(trans ? trans.text : status);
+            let disp = getStatusDisplay(status, currentPlatform);
+            statusLabels.push(disp.text);
             statusData.push(count);
-            statusColors.push(trans ? trans.color : '#8B5CF6'); 
+            statusColors.push(disp.color || '#8B5CF6'); 
         }
 
         statusChartInstance = new Chart(document.getElementById('statusChart'), {
@@ -1592,6 +1714,7 @@
                 <th>التاريخ</th>
                 <th>معرف / رقم العميل</th>
                 <th>${shouldShowCampaignId(currentPlatform) ? 'الحملة الإعلانية + ID' : 'الحملة الإعلانية'}</th>
+                ${currentPlatform === 'hero_messenger' ? '<th>حالة البوت</th>' : ''}
                 ${config.hasAdLink ? '<th>رابط الإعلان</th>' : ''}
             </tr>`;
 
@@ -1612,8 +1735,8 @@
         } else {
             ordersToRender.forEach(row => {
                 let date = generateHtmlDate(row["_rawDate"]);
-                let rawStatus = row["حالة الطلب"] || "created";
-                let trans = statusTranslations[rawStatus] || { text: rawStatus, color: '#64748B', bgColor: '#F1F5F9' };
+                let rawStatus = row["حالة الطلب"] || "-";
+                let trans = getStatusDisplay(rawStatus, currentPlatform);
                 let statusBadge = `<span class="status-badge" style="background:${trans.bgColor}; color:${trans.color};">${trans.text}</span>`;
                 let cleanCamp = row["اسم الحملة النظيف"] || "أورجانيك";
                 let campaignIdHtml = (shouldShowCampaignId(currentPlatform) && row["معرف الحملة"])
@@ -1638,15 +1761,25 @@
                         let link = row["رابط الإعلان"];
                         adLinkTd = `<td>${(link && link !== "أورجانيك" && link !== "-") ? `<a href="${link}" target="_blank" class="link-btn">🔗 عرض</a>` : '-'}</td>`;
                     }
+                    let mobileSub = (currentPlatform === 'hero_messenger' && row["رقم بديل"])
+                        ? `<span class="sub-meta" dir="ltr">${row["رقم بديل"]}</span>`
+                        : "";
+                    let govSub = (currentPlatform === 'hero_messenger' && row["العنوان"])
+                        ? `<span class="sub-meta">${row["العنوان"]}</span>`
+                        : "";
+                    let priceSub = (currentPlatform === 'hero_messenger' && (row["سعر المنتج"] || row["سعر الشحن"]))
+                        ? `<span class="sub-meta">${row["سعر المنتج"]} + ${row["سعر الشحن"]} شحن</span>`
+                        : "";
+
                     ordersHTML += `<tr>
                         <td>${date}</td>
                         <td><span class="wesell-badge">#${row["رقم الأوردر"]}</span></td>
                         <td dir="ltr" style="font-family:monospace; font-size:0.88em; color:var(--text-muted);">${row["Sender ID"]}</td>
                         <td style="font-weight:700;">${row["اسم العميل"]}</td>
-                        <td dir="ltr" style="font-family:monospace; font-weight:700;">${row["رقم الموبايل"]}</td>
-                        <td>${row["المحافظة"]}</td>
+                        <td dir="ltr" style="font-family:monospace; font-weight:700;">${row["رقم الموبايل"]}${mobileSub}</td>
+                        <td>${row["المحافظة"]}${govSub}</td>
                         <td style="font-weight:700; color:var(--primary);">${row["اسم المنتج"]}</td>
-                        <td style="font-weight:800; color:#10B981;">${row["السعر"]} ج.م</td>
+                        <td style="font-weight:800; color:#10B981;">${row["السعر"]} ج.م${priceSub}</td>
                         <td>${campBadge}</td>
                         ${adLinkTd}
                         <td>${statusBadge}</td>
@@ -1660,7 +1793,7 @@
         const leadsToRender = leadsData.slice(0, MAX_TABLE_RENDER_ROWS);
         let leadsHTML = "";
         if (leadsToRender.length === 0) {
-            leadsHTML = `<tr><td colspan="4" style="text-align:center; padding:35px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
+            leadsHTML = `<tr><td colspan="5" style="text-align:center; padding:35px; font-weight:800; color:var(--text-muted);">لا توجد بيانات عملاء محتملين 🔍</td></tr>`;
         } else {
             leadsToRender.forEach(row => {
                 let date = generateHtmlDate(row["_rawDate"]);
@@ -1669,6 +1802,15 @@
                     ? `<span class="campaign-id"><span class="campaign-id-label">ID:</span>${row["معرف الحملة"]}</span>`
                     : "";
                 let campBadge = `<span class="${cleanCamp === 'أورجانيك' ? 'organic-badge' : 'campaign-badge'}">${cleanCamp}</span>${campaignIdHtml}`;
+
+                let botStatusTd = "";
+                if (currentPlatform === 'hero_messenger') {
+                    let bStatus = row["حالة البوت"] || "-";
+                    let bColor = bStatus === 'human' ? '#DC2626' : (bStatus === 'ai' ? '#16A34A' : '#64748B');
+                    let bBg = bStatus === 'human' ? '#FEE2E2' : (bStatus === 'ai' ? '#DCFCE7' : '#F1F5F9');
+                    botStatusTd = `<td><span class="status-badge" style="background:${bBg}; color:${bColor};">${bStatus}</span></td>`;
+                }
+
                 let adLinkTd = "";
                 if (config.hasAdLink) {
                     let link = row["رابط الإعلان"];
@@ -1678,6 +1820,7 @@
                     <td>${date}</td>
                     <td dir="ltr" style="font-family:monospace; font-weight:700; color:var(--primary);">${row["Sender ID"]}</td>
                     <td>${campBadge}</td>
+                    ${botStatusTd}
                     ${adLinkTd}
                 </tr>`;
             });
@@ -1751,8 +1894,8 @@
 
     function generateHtmlDate(rawDate) {
         if (!rawDate) return "-";
-        let d = new Date(rawDate);
-        if (isNaN(d.getTime())) return "-";
+        let d = parseSafeDate(rawDate);
+        if (!d) return String(rawDate);
         let datePart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         let hours = d.getHours();
         let ampm = hours >= 12 ? 'PM' : 'AM';
@@ -1776,18 +1919,30 @@
         if (isOrdersTabActive) {
             csvContent += "التاريخ,رقم الأوردر,معرف العميل,الاسم,الموبايل,المحافظة,المنتج,السعر,الحملة,حالة الطلب\n";
             dataToExport.forEach(row => {
-                let d = row["_rawDate"] ? new Date(row["_rawDate"]).toLocaleString('en-CA') : "-";
+                let parsed = parseSafeDate(row["_rawDate"]);
+                let d = parsed ? parsed.toLocaleString('en-CA') : (row["_rawDate"] || "-");
                 let clean = (val) => String(val || "-").replace(/,/g, " ").replace(/\n/g, " ");
-                let stat = statusTranslations[row["حالة الطلب"]]?.text || row["حالة الطلب"];
+                let stat = getStatusDisplay(row["حالة الطلب"], currentPlatform).text;
                 csvContent += `${clean(d)},${clean(row["رقم الأوردر"])},${clean(row["Sender ID"])},${clean(row["اسم العميل"])},${clean(row["رقم الموبايل"])},${clean(row["المحافظة"])},${clean(row["اسم المنتج"])},${clean(row["السعر"])},${clean(row["اسم الحملة الأصلي"])},${clean(stat)}\n`;
             });
         } else {
-            csvContent += "التاريخ,معرف العميل,الحملة الإعلانية,رابط الإعلان\n";
-            dataToExport.forEach(row => {
-                let d = row["_rawDate"] ? new Date(row["_rawDate"]).toLocaleString('en-CA') : "-";
-                let clean = (val) => String(val || "-").replace(/,/g, " ");
-                csvContent += `${clean(d)},${clean(row["Sender ID"])},${clean(row["اسم الحملة الأصلي"])},${clean(row["رابط الإعلان"])}\n`;
-            });
+            if (currentPlatform === 'hero_messenger') {
+                csvContent += "التاريخ,معرف العميل,الحملة الإعلانية,معرف الحملة,حالة البوت\n";
+                dataToExport.forEach(row => {
+                    let parsed = parseSafeDate(row["_rawDate"]);
+                    let d = parsed ? parsed.toLocaleString('en-CA') : (row["_rawDate"] || "-");
+                    let clean = (val) => String(val || "-").replace(/,/g, " ");
+                    csvContent += `${clean(d)},${clean(row["Sender ID"])},${clean(row["اسم الحملة الأصلي"])},${clean(row["معرف الحملة"])},${clean(row["حالة البوت"])}\n`;
+                });
+            } else {
+                csvContent += "التاريخ,معرف العميل,الحملة الإعلانية,رابط الإعلان\n";
+                dataToExport.forEach(row => {
+                    let parsed = parseSafeDate(row["_rawDate"]);
+                    let d = parsed ? parsed.toLocaleString('en-CA') : (row["_rawDate"] || "-");
+                    let clean = (val) => String(val || "-").replace(/,/g, " ");
+                    csvContent += `${clean(d)},${clean(row["Sender ID"])},${clean(row["اسم الحملة الأصلي"])},${clean(row["رابط الإعلان"])}\n`;
+                });
+            }
         }
 
         let encodedUri = encodeURI(csvContent);
