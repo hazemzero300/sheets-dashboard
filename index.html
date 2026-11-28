@@ -843,7 +843,7 @@
         'potential_customers_khaled_store': 'id, created_at, sender_id, campaign_id',
         
         'whatsapp_successful_orders_khaled_store': 'id, created_at, customer_name, mobile, governorate, sku, product_name, price, ad_name, ad_link, order_status',
-        'whatsapp_potential_customers_khaled_store': 'created_at, customer_number, campaign_id, campaign_name, ad_link',
+        'whatsapp_leads_khaled_store': 'sender_id, source_type, ad_id, ad_title, ad_link, bot_status, created_at, updated_at',
         
         'easy_order_campaigns': 'id, created_at, customer_name, phone, phone_alt, product_name, utm_source, utm_campaign, order_status',
         
@@ -864,7 +864,7 @@
         'whatsapp': {
             title: 'Khaled Store | مبيعات الواتساب',
             ordersTable: 'whatsapp_successful_orders_khaled_store',
-            leadsTable: 'whatsapp_potential_customers_khaled_store',
+            leadsTable: 'whatsapp_leads_khaled_store',
             hasLeads: true, hasRevenue: true, hasGov: true, hasAdLink: true, isEasyOrders: false
         },
         'easy_orders': {
@@ -1018,7 +1018,7 @@
     // ==========================================
     async function loadSupabaseTable(tableName) {
         if (!tableName) return { data: [], error: null };
-        const isLeadsTable = tableName.includes('potential_customers') || tableName === 'leads_hero';
+        const isLeadsTable = tableName.includes('potential_customers') || tableName === 'leads_hero' || tableName === 'whatsapp_leads_khaled_store';
         const useIdOrdering = (tableName === 'successful_orders_brand_hero');
         const orderCol = useIdOrdering ? 'id' : 'created_at';
         const columnsToSelect = TABLE_COLUMNS[tableName] || '*';
@@ -1198,6 +1198,28 @@
                     "معرف الحملة": campaignId,
                     "حالة البوت": (item.bot_status && String(item.bot_status).trim() !== "") ? String(item.bot_status).trim() : "-",
                     "رابط الإعلان": "أورجانيك"
+                };
+            }
+
+            if (platformKey === 'whatsapp') {
+                const isOrganic = !item.source_type || String(item.source_type).toLowerCase() === 'organic';
+                const rawTitle = (item.ad_title && !['EMPTY', 'أورجانيك', 'ORGANIC'].includes(String(item.ad_title).trim().toUpperCase()))
+                    ? String(item.ad_title).trim()
+                    : "";
+                const rawAdId = (item.ad_id && !['EMPTY', 'أورجانيك', 'ORGANIC'].includes(String(item.ad_id).trim().toUpperCase()))
+                    ? String(item.ad_id).trim()
+                    : "";
+                const rawCamp = rawTitle || (isOrganic ? "أورجانيك" : (rawAdId || "حملة إعلانية"));
+                const cleanCamp = rawTitle ? cleanCampaignName(rawTitle) : (isOrganic ? "أورجانيك" : "حملة إعلانية");
+                const campaignId = extractCampaignId(rawAdId) || rawAdId;
+
+                return {
+                    "_rawDate": item.created_at,
+                    "Sender ID": item.sender_id || "-",
+                    "اسم الحملة النظيف": cleanCamp,
+                    "اسم الحملة الأصلي": rawCamp,
+                    "معرف الحملة": campaignId,
+                    "رابط الإعلان": item.ad_link || "أورجانيك"
                 };
             }
 
